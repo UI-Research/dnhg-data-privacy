@@ -9,7 +9,8 @@
 # OUTPUTS:
 #     dp_x: new differentially private counts
 
-dp_count <- function(x, eps, N) {
+dp_count <- function(x, eps) {
+  N <- sum(x)
   dp_x <- sapply(x, function(x) max(x + rdoublex(1, 0, 1 / eps), 0)) %>%
     `/`(sum(.)) %>%
     `*`(N) %>%

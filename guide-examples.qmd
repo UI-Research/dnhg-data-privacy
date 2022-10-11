@@ -1,0 +1,800 @@
+---
+title: "Do No Harm Guide"
+subtitle: "Applying Equity Awareness in Data Privacy Methods Examples"
+author-title: "Authors"
+authors: "Claire McKay Bowen and Joshua Snoke"
+affiliation: "Urban Institute and RAND Corp."
+date: "2022-11"
+format:
+  html:
+    theme: urbn.scss
+    self-contained: true
+    code-fold: true
+    code-line-numbers: true
+    html-math-method: katex
+    df-print: default
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    number-depth: 3
+    highlight-style: pygments
+editor_options: 
+  chunk_output_type: console
+---
+
+This Quarto Document walks through "Do No Harm Guide: Applying Equity Awareness in Data Privacy Methods".
+
+**Disclaimer:** These analyses are inspired by real data and public policy analytics, but are not at all representative of them.
+
+- Two states (PA and NM)
+- Broadband access counts (bad for suppression) <- census tract
+- Correlation matrix (bad for synthetic data)
+- Something that DP is bad on
+
+```{r}
+#| label: load-pkgs
+#| code-summary: "Packages"
+#| message: false
+#| warning: false
+#| echo: false
+library(tidyverse)  # for data wrangling and visualization
+library(knitr)      # for tables
+library(readxl)     # for importing excel (data)
+library(smoothmest) # for laplace distribution
+library(urbnthemes) # for ggplot2 theme
+library(urbnmapr)   # for maps
+
+set_urbn_defaults(style = "print")
+```
+
+## Data
+
+The data are from a Urban research report called, "[Mapping Student Needs during COVID-19](https://www.urban.org/research/publication/mapping-student-needs-during-covid-19)" and can be accessed at [Urban Data Catalog](https://datacatalog.urban.org/dataset/household-conditions-geographic-school-district). The purpose of the research is to "...highlight different types of challenges to remote learning and point to district and educator strategies that mitigate harm to students as districts navigate long-term school closures."
+
+For the Do No Harm Guide, we focus on one state, New Mexico, and isolate the six factors the researchers focused on in addition to poverty: linguistic isolation, child disability status, parents in vulnerable economic sectors, single parents, crowded conditions, and lack of computer or broadband access.
+
+```{r}
+#| label: load-data
+#| code-summary: "data"
+#| message: false
+#| warning: false
+
+# New Mexico Data
+data_nm <- read_excel("data/data-raw/nhgis_district_data_var.xlsx") %>%
+  dplyr::select(
+    state,
+    geographic_school_district,
+    children_5_17,
+    poverty,
+    linguistically_isolated,
+    children_disability,
+    vulnerable_job,
+    single_parent,
+    crowded_conditions, 
+    no_computer_internet
+  ) %>%
+  filter(state == "New Mexico")
+
+# Merge county data
+nm_county <- read_delim("data/data-raw/nm_county.txt")
+data_nm <- left_join(data_nm, nm_county, by="geographic_school_district")
+
+# Rename and reorder columns
+data_nm <- data_nm %>%
+  dplyr::select(
+    city,
+    county_name,
+    geographic_school_district,
+    children_5_17,
+    poverty,
+    linguistically_isolated,
+    children_disability,
+    vulnerable_job,
+    single_parent,
+    crowded_conditions, 
+    no_computer_internet
+  )
+
+```
+
+The data report the values as proportions (with margins of error), so we create another version of the data (tabular). However, given that the proportions are estimates with margins of error, so we readjust the values to ensure there is whole counts.
+```{r}
+#| label: nm-count-data
+#| code-summary: "new mexico count"
+#| message: false
+#| warning: false
+
+# New Mexico Count Data
+nm_counts <- data_nm %>%
+  mutate(
+    poverty = round(poverty * children_5_17),
+    linguistically_isolated = round(linguistically_isolated * children_5_17),
+    children_disability = round(children_disability * children_5_17),
+    vulnerable_job = round(vulnerable_job * children_5_17),
+    single_parent = round(single_parent * children_5_17),
+    crowded_conditions = round(crowded_conditions * children_5_17), 
+    no_computer_internet = round(no_computer_internet * children_5_17)
+  )
+```
+
+## Privacy Methods
+In this section, we apply the current three most popular data privacy and confidentiality methods:
+
+  1. **Suppression** - removing values via k-anonymity.
+  2. **Synthetic Data** - replicating the confidential data based on a statistically representative model to generate pseudo or fake data records
+  3. **Noise infusion** - differential privacy or differentially private method
+
+### Suppression
+
+Suppression, or not reporting certain values from the data, is one of the earliest and easiest statistical disclosure control methods. A version of suppression is k-anonymity, which requires that any released data set contain at least k observations for
+each combination of possibly identifying variables (e.g., age, sex, or race). We can alter or suppress the data to achieve a certain level of k-anonymity. In our case, we will suppress the data. We will test with k = (3, 5, 10).
+
+```{r}
+#| label: suppression
+#| code-summary: "suppression"
+#| message: false
+#| warning: false
+
+k <- 3
+nm_supp_3 <- nm_counts %>%
+  replace(nm_counts < k, 0) %>%
+  mutate(
+    poverty = poverty / children_5_17,
+    linguistically_isolated = linguistically_isolated / children_5_17,
+    children_disability = children_disability / children_5_17,
+    vulnerable_job = vulnerable_job / children_5_17,
+    single_parent = single_parent / children_5_17,
+    crowded_conditions = crowded_conditions / children_5_17, 
+    no_computer_internet = no_computer_internet / children_5_17
+  )
+
+k <- 5
+nm_supp_5 <- nm_counts %>%
+  replace(nm_counts < k, 0) %>%
+  mutate(
+    poverty = poverty / children_5_17,
+    linguistically_isolated = linguistically_isolated / children_5_17,
+    children_disability = children_disability / children_5_17,
+    vulnerable_job = vulnerable_job / children_5_17,
+    single_parent = single_parent / children_5_17,
+    crowded_conditions = crowded_conditions / children_5_17, 
+    no_computer_internet = no_computer_internet / children_5_17
+  )
+
+k <- 10
+nm_supp_10 <- nm_counts %>%
+  replace(nm_counts < k, 0) %>%
+  mutate(
+    poverty = poverty / children_5_17,
+    linguistically_isolated = linguistically_isolated / children_5_17,
+    children_disability = children_disability / children_5_17,
+    vulnerable_job = vulnerable_job / children_5_17,
+    single_parent = single_parent / children_5_17,
+    crowded_conditions = crowded_conditions / children_5_17, 
+    no_computer_internet = no_computer_internet / children_5_17
+  )
+```
+
+### Synthetic Data (Non-parametric)
+
+Synthetic data consists of pseudo or “fake” records that are statistically representative of the confidential data. Records are considered synthesized when they are replaced with draws from a model fitted to the confidential data.
+
+Fully synthetic data synthesizes all values in the dataset with imputed amounts. Fully synthetic data no longer directly map onto the confidential records, but remain statistically representative. Since fully synthetic data does not contain any actual observations, it protects against both attribute and identity disclosure. Below, we see an example of what a fully synthesized version of the confidential data shown above could look like
+
+Parametric data synthesis is the process of data generation based on a parametric distribution or generative model.
+
+ - Parametric models assume a finite number of parameters that capture the complexity of the data.
+ - They are generally less flexible, but more interpretable than nonparametric models.
+ - Examples: regression to assign an age variable, sampling from a probability distribution, Bayesian models, copula based models.
+
+Nonparametric data synthesis is the process of data generation that is not based on assumptions about an underlying distribution or model.
+
+ - Often, nonparametric methods use frequency proportions or marginal probabilities as weights for some type of sampling scheme.
+ - They are generally more flexible, but less interpretable than parametric models.
+ - Examples: assigning gender based on underlying proportions, CART (Classification and Regression Trees) models, RNN models, etc.
+
+We will generate fully synthetic data via a nonparametric model for each factor and total children count. We have a post-processing step to ensure that the total count is greater than or equal to max count of any factor. We also assume zeros (i.e., if there is a zero in the data, we do not alter it).
+```{r}
+#| label: synthetic
+#| code-summary: "synthetic"
+#| message: false
+#| warning: false
+
+# Synthetic data based on the proportions for each factor
+source("rcode/synth-count.R")
+source("rcode/post-processing.R")
+set.seed(42)
+nm_synth <- nm_counts[, -(1:3)] %>% 
+  apply(2, synth_count) %>% 
+  apply(1, post_processing) %>% 
+  t() %>% as_tibble() %>%
+  mutate(
+    poverty = poverty / children_5_17,
+    linguistically_isolated = linguistically_isolated / children_5_17,
+    children_disability = children_disability / children_5_17,
+    vulnerable_job = vulnerable_job / children_5_17,
+    single_parent = single_parent / children_5_17,
+    crowded_conditions = crowded_conditions / children_5_17, 
+    no_computer_internet = no_computer_internet / children_5_17
+  )
+
+nm_synth <- bind_cols(data_nm[, 1:3], nm_synth)
+```
+
+### DP synthetic - Laplace sanitizer
+
+At a high level, differential privacy (DP) is a strict mathematical definition that a method must satisfy (or meet the mathematical conditions) to be considered differentially private, not a statement or description of the data itself. 
+
+A sanitizer that satisfies DP is the Laplace mechanism, which adds noise by drawing values from a Laplace distribution. The Laplace distribution is centered at zero and the distribution variability (i.e., wide or narrow the distribution is) is the ratio of the privacy loss budget, $\epsilon$, over the sensitivity of the target statistics. Having the distribution centered at zero means there is a higher probability of adding very little or no noise to the confidential data statistics. For the noise variability, if $\epsilon$ is large or the sensitivity of the statistic is low, then there is a higher probability of adding very little noise to confidential data statistic. If $\epsilon$ is small or the sensitivity of the statistic probability of adding a lot of noise to the released statistic.
+
+For our example, we will add Laplace noise to each count and normalize to the totals. In other words, we assume the total counts are invariant (i.e., no change to the statistics). We will test for $\epsilon$ = 0.5 and 1.
+
+We have a post-processing step to ensure that the total count is greater than or equal to max count of any factor. We also assume zeros (i.e., if there is a zero in the data, we do not alter it).
+
+```{r}
+#| label: dp-laplace
+#| code-summary: "laplace-mechanism"
+#| message: false
+#| warning: false
+
+# Synthetic data based on the proportions for each factor
+source("rcode/dp-count.R")
+source("rcode/helper-functions.R")
+set.seed(42)
+
+eps <- 0.5
+nm_dp05 <- nm_counts[, -(1:3)] %>% 
+  apply(2, function(x) dp_count(x, eps)) %>% 
+  apply(1, post_processing) %>% 
+  t() %>% as_tibble() %>%
+  mutate(
+    poverty = poverty / children_5_17,
+    linguistically_isolated = linguistically_isolated / children_5_17,
+    children_disability = children_disability / children_5_17,
+    vulnerable_job = vulnerable_job / children_5_17,
+    single_parent = single_parent / children_5_17,
+    crowded_conditions = crowded_conditions / children_5_17, 
+    no_computer_internet = no_computer_internet / children_5_17
+  )
+
+nm_dp05 <- bind_cols(data_nm[, 1:3], nm_dp05)
+
+eps <- 1
+nm_dp1 <- nm_counts[, -(1:3)] %>% 
+  apply(2, function(x) dp_count(x, eps)) %>% 
+  apply(1, post_processing) %>% 
+  t() %>% as_tibble() %>%
+  mutate(
+    poverty = poverty / children_5_17,
+    linguistically_isolated = linguistically_isolated / children_5_17,
+    children_disability = children_disability / children_5_17,
+    vulnerable_job = vulnerable_job / children_5_17,
+    single_parent = single_parent / children_5_17,
+    crowded_conditions = crowded_conditions / children_5_17, 
+    no_computer_internet = no_computer_internet / children_5_17
+  )
+
+nm_dp1 <- bind_cols(data_nm[, 1:3], nm_dp1)
+```
+
+## Utility
+
+### Correlation Matrix
+Our first utility metric is replicating the correlation matrix from the original report, but for the New Mexico State data.
+
+#### Original Data
+The Urban report focused on what factors were highly correlated with poverty. Based on the correlation matrix, we see that "lack of computer or broadband access" is most correlated (0.53) with "single parents" is next (0.39). The other factors would be considered weak, where the values are under 0.15 (the next largest at 0.12).
+
+We will see if the altered datasets preserve this relationship. 
+```{r}
+#| label: fig-nm-cor
+#| fig-cap: "Correlations between Measures of Vulnerability across PUMAs in New Mexico"
+#| warning: false
+
+# Correlation values
+cor_nm <- data_nm[, -c(1:4)] %>%
+  cor()
+cor_nm[upper.tri(cor_nm)] <- NA
+
+# Correlation matrix
+cor_nm %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
+  mutate(
+    var1 = factor(var1, levels = rev(colnames(cor_nm))),
+    var2 = factor(var2, levels = colnames(cor_nm))
+  ) %>%
+  ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() + 
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+```
+
+#### Suppressed Data
+
+Calculating the correlation values when k = 3.
+```{r}
+#| label: cor-suppressed-3
+#| code-summary: "cor-suppressed-3"
+#| message: false
+#| warning: false
+
+# Correlation values
+cor_supp <- nm_supp_3[, -c(1:4)] %>%
+  cor()
+cor_supp[upper.tri(cor_supp)] <- NA
+
+bias_supp <- cor_supp - cor_nm
+
+bias_supp %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
+```
+
+Generating the correlation matrix figures.
+
+For the suppressed data, we see that "lack of computer or broadband access" is still the most correlated (0.53) with "single parents" is next (0.4). These values are roughly the same as the original data, and the other factors are still weak values.
+
+Overall, the L1 difference on the correlation matrix is 0.41.
+
+```{r}
+#| label: fig-cor-suppressed-3
+#| fig-cap: "Correlations between Measures of Vulnerability across PUMAs in New Mexico (Suppressed, k = 3)"
+#| fig-subcap:
+#|   - "Correlations (Suppressed, k = 3)"
+#|   - "Correlations Bias" 
+#| warning: false
+
+# Correlation matrix for suppressed data
+cor_supp %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
+  mutate(
+    var1 = factor(var1, levels = rev(colnames(cor_supp))),
+    var2 = factor(var2, levels = colnames(cor_supp))
+  ) %>%
+  ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() + 
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+
+# Correlation matrix for suppressed data - original data
+bias_supp %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
+  mutate(
+    var1 = factor(var1, levels = rev(colnames(bias_supp))),
+    var2 = factor(var2, levels = colnames(bias_supp))
+  ) %>%
+  ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() +
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+```
+
+Calculating the correlation values when k = 10.
+```{r}
+#| label: cor-suppressed-10
+#| code-summary: "cor-suppressed-10"
+#| message: false
+#| warning: false
+
+# Correlation values
+cor_supp <- nm_supp_10[, -c(1:4)] %>%
+  cor()
+cor_supp[upper.tri(cor_supp)] <- NA
+
+bias_supp <- cor_supp - cor_nm
+
+bias_supp %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
+```
+
+Generating the correlation matrix figures.
+
+For the suppressed data, we see that "lack of computer or broadband access" is still the most correlated (0.61) with "single parents" is next (0.44). These values are higher than the original data, and we have "parents in vulnerable economic sectors" has a moderate signal at 0.24, which was much weaker in the original data.
+
+Overall, the L1 difference on the correlation matrix is 1.33.
+
+```{r}
+#| label: fig-cor-suppressed-10
+#| fig-cap: "Correlations between Measures of Vulnerability across PUMAs in New Mexico (Suppressed, k = 10)"
+#| fig-subcap:
+#|   - "Correlations (Suppressed, k = 10)"
+#|   - "Correlations Bias" 
+#| warning: false
+
+# Correlation matrix for suppressed data
+cor_supp %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
+  mutate(
+    var1 = factor(var1, levels = rev(colnames(cor_supp))),
+    var2 = factor(var2, levels = colnames(cor_supp))
+  ) %>%
+  ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() + 
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+
+# Correlation matrix for suppressed data - original data
+bias_supp %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
+  mutate(
+    var1 = factor(var1, levels = rev(colnames(bias_supp))),
+    var2 = factor(var2, levels = colnames(bias_supp))
+  ) %>%
+  ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() +
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+```
+
+#### Synthetic Data
+
+Calculating the correlation values.
+```{r}
+#| label: cor-synthetic
+#| code-summary: "cor-synthetic"
+#| message: false
+#| warning: false
+
+# Correlation values
+cor_synth <- nm_synth[, -c(1:4)] %>%
+  cor()
+cor_synth[upper.tri(cor_synth)] <- NA
+
+bias_synth <- cor_synth - cor_nm
+
+bias_synth %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
+```
+
+Generating the correlation matrix figures.
+
+For the synthetic data, we see that "lack of computer or broadband access" is still the most correlated (0.37) with "single parents" is next (0.31). These values are lower than the original data, but the other factors are still weak values.
+
+Overall, the L1 difference on the correlation matrix is 1.01.
+
+```{r}
+#| label: fig-cor-synthetic
+#| fig-cap: "Correlations between Measures of Vulnerability across PUMAs in New Mexico (Synthetic)"
+#| fig-subcap:
+#|   - "Correlations (Synthetic)"
+#|   - "Correlations Bias" 
+#| warning: false
+
+# Correlation matrix for suppressed data
+cor_synth %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
+  mutate(
+    var1 = factor(var1, levels = rev(colnames(cor_synth))),
+    var2 = factor(var2, levels = colnames(cor_synth))
+  ) %>%
+  ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() + 
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+
+# Correlation matrix for suppressed data - original data
+bias_synth %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
+  mutate(
+    var1 = factor(var1, levels = rev(colnames(bias_synth))),
+    var2 = factor(var2, levels = colnames(bias_synth))
+  ) %>%
+  ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() +
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+```
+
+#### DP Data
+
+Calculating the correlation values for $\epsilon$ = 0.5.
+```{r}
+#| label: cor-dp-05
+#| code-summary: "cor-dp-05"
+#| message: false
+#| warning: false
+
+# Correlation values
+cor_dp <- nm_dp05[, -c(1:4)] %>%
+  cor()
+cor_dp[upper.tri(cor_dp)] <- NA
+
+bias_dp <- cor_dp - cor_nm
+
+bias_dp %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
+```
+
+Generating the correlation matrix figures.
+
+For the synthetic data, we see that "lack of computer or broadband access" is still the most correlated (0.37) with "single parents" is next (0.31). These values are lower than the original data, but the other factors are still weak values.
+
+Overall, the L1 difference on the correlation matrix is 1.15.
+
+```{r}
+#| label: fig-cor-dp-05
+#| fig-cap: "Correlations between Measures of Vulnerability across PUMAs in New Mexico (Differentially Private, eps = 0.5)"
+#| fig-subcap:
+#|   - "Correlations (Differentially Private, eps = 0.5)"
+#|   - "Correlations Bias" 
+#| warning: false
+
+# Correlation matrix for suppressed data
+cor_dp %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
+  mutate(
+    var1 = factor(var1, levels = rev(colnames(cor_dp))),
+    var2 = factor(var2, levels = colnames(cor_dp))
+  ) %>%
+  ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() + 
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+
+# Correlation matrix for suppressed data - original data
+bias_dp %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
+  mutate(
+    var1 = factor(var1, levels = rev(colnames(bias_dp))),
+    var2 = factor(var2, levels = colnames(bias_dp))
+  ) %>%
+  ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() +
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+```
+
+
+Calculating the correlation values for $\epsilon$ = 1.
+```{r}
+#| label: cor-dp-1
+#| code-summary: "cor-dp-1"
+#| message: false
+#| warning: false
+
+# Correlation values
+cor_dp <- nm_dp1[, -c(1:4)] %>%
+  cor()
+cor_dp[upper.tri(cor_dp)] <- NA
+
+bias_dp <- cor_dp - cor_nm
+
+bias_dp %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
+```
+
+Generating the correlation matrix figures.
+
+For the synthetic data, we see that "lack of computer or broadband access" is still the most correlated (0.51) with "single parents" is next (0.41). These values are lower than the original data, and the other factors are still weak values.
+
+Overall, the L1 difference on the correlation matrix is 0.53.
+
+```{r}
+#| label: fig-cor-dp-1
+#| fig-cap: "Correlations between Measures of Vulnerability across PUMAs in New Mexico (Differentially Private, eps = 1)"
+#| fig-subcap:
+#|   - "Correlations (Differentially Private, eps = 1)"
+#|   - "Correlations Bias" 
+#| warning: false
+
+# Correlation matrix for suppressed data
+cor_dp %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
+  mutate(
+    var1 = factor(var1, levels = rev(colnames(cor_dp))),
+    var2 = factor(var2, levels = colnames(cor_dp))
+  ) %>%
+  ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() + 
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+
+# Correlation matrix for suppressed data - original data
+bias_dp %>%
+  as_tibble(rownames = "var1") %>%
+  pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
+  mutate(
+    var1 = factor(var1, levels = rev(colnames(bias_dp))),
+    var2 = factor(var2, levels = colnames(bias_dp))
+  ) %>%
+  ggplot(aes(var1, var2, fill = correlation)) +
+  geom_tile() +
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL)
+```
+### Broadband Access
+Our next utility metric is looking at the share of students without access to a computer or broadband internet.
+
+#### Original Data
+```{r}
+#| label: map-data
+#| code-summary: "map"
+#| message: false
+#| warning: false
+
+# New Mexico Data
+set_urbn_defaults(style = "map")
+nm_counties <- counties %>%
+  filter(state_name == "New Mexico")
+
+data_broadband <- data_nm %>%
+    dplyr::select(
+      county_name,
+      no_computer_internet
+    )
+
+data_broadband %>%
+  group_by(county_name) %>%
+  summarize(no_computer_internet = mean(no_computer_internet)) %>%
+  right_join(nm_counties, by = "county_name") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = no_computer_internet)) +
+  geom_polygon(color = "#ffffff", size = 0.5) +
+  scale_fill_gradientn(labels = scales::percent, limits = c(0, 0.6))
+```
+
+#### Suppressed Data
+```{r}
+#| label: map-supp
+#| code-summary: "map-supp"
+#| message: false
+#| warning: false
+
+# New Mexico Data
+broadband_supp <- nm_supp_10 %>%
+    dplyr::select(
+      county_name,
+      no_computer_internet
+    )
+
+bias <- broadband_supp$no_computer_internet - data_broadband$no_computer_internet
+bias <- bind_cols(broadband_supp$county_name, bias)
+colnames(bias) <- c("county_name", "no_computer_internet")
+```
+
+```{r}
+#| label: fig-map-suppressed-10
+#| fig-cap: "Share of Students without Access to a Computer or Broadband Internet (Suppressed, k = 10)"
+#| fig-subcap:
+#|   - "Share (Suppressed, k = 10)"
+#|   - "Share Bias" 
+#| warning: false
+
+broadband_supp %>%
+  group_by(county_name) %>%
+  summarize(no_computer_internet = mean(no_computer_internet)) %>%
+  right_join(nm_counties, by = "county_name") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = no_computer_internet)) +
+  geom_polygon(color = "#ffffff", size = 0.5) +
+  scale_fill_gradientn(labels = scales::percent, limits = c(0, 0.6))
+
+bias %>%
+  group_by(county_name) %>%
+  summarize(no_computer_internet = mean(no_computer_internet)) %>%
+  right_join(nm_counties, by = "county_name") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = no_computer_internet)) +
+  geom_polygon(color = "#ffffff", size = 0.5) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, labels = scales::percent, limits = c(-0.3,0.3))
+```
+
+#### Synthetic Data
+```{r}
+#| label: map-synth
+#| code-summary: "map-synth"
+#| message: false
+#| warning: false
+
+# New Mexico Data
+broadband_synth <- nm_synth %>%
+    dplyr::select(
+      county_name,
+      no_computer_internet
+    )
+
+bias <- broadband_synth$no_computer_internet - data_broadband$no_computer_internet
+bias <- bind_cols(broadband_synth$county_name, bias)
+colnames(bias) <- c("county_name", "no_computer_internet")
+```
+
+```{r}
+#| label: fig-map-synth
+#| fig-cap: "Share of Students without Access to a Computer or Broadband Internet (Synthetic)"
+#| fig-subcap:
+#|   - "Share (Synthetic)"
+#|   - "Share Bias" 
+#| warning: false
+broadband_synth  %>%
+  group_by(county_name) %>%
+  summarize(no_computer_internet = mean(no_computer_internet)) %>%
+  right_join(nm_counties, by = "county_name") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = no_computer_internet)) +
+  geom_polygon(color = "#ffffff", size = 0.5) +
+  scale_fill_gradientn(labels = scales::percent, limits = c(0, 0.6))
+
+bias %>%
+  group_by(county_name) %>%
+  summarize(no_computer_internet = mean(no_computer_internet)) %>%
+  right_join(nm_counties, by = "county_name") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = no_computer_internet)) +
+  geom_polygon(color = "#ffffff", size = 0.5) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, labels = scales::percent, limits = c(-0.3,0.3))
+```
+
+#### DP Data
+```{r}
+#| label: map-dp
+#| code-summary: "map-dp"
+#| message: false
+#| warning: false
+
+# New Mexico Data
+broadband_dp <- nm_dp1 %>%
+    dplyr::select(
+      county_name,
+      no_computer_internet
+    )
+
+bias <- broadband_dp$no_computer_internet - data_broadband$no_computer_internet
+bias <- bind_cols(broadband_dp$county_name, bias)
+colnames(bias) <- c("county_name", "no_computer_internet")
+```
+
+```{r}
+#| label: fig-map-dp
+#| fig-cap: "Share of Students without Access to a Computer or Broadband Internet (Differentially Private)"
+#| fig-subcap:
+#|   - "Share (Differentially Private)"
+#|   - "Share Bias" 
+#| warning: false
+broadband_dp  %>%
+  group_by(county_name) %>%
+  summarize(no_computer_internet = mean(no_computer_internet)) %>%
+  right_join(nm_counties, by = "county_name") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = no_computer_internet)) +
+  geom_polygon(color = "#ffffff", size = 0.5) +
+  scale_fill_gradientn(labels = scales::percent, limits = c(0, 0.6))
+
+bias %>%
+  group_by(county_name) %>%
+  summarize(no_computer_internet = mean(no_computer_internet)) %>%
+  right_join(nm_counties, by = "county_name") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = no_computer_internet)) +
+  geom_polygon(color = "#ffffff", size = 0.5) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, labels = scales::percent, limits = c(-0.3,0.3))
+```

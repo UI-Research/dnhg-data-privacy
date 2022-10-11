@@ -1,0 +1,199 @@
+geographic_school_district	city	county_name
+Abq School Of Excellence	Albuquerque	Bernalillo County
+Abq Sign Language Academy	Albuquerque	Bernalillo County
+Academy Of Trades And Tech	Albuquerque	Bernalillo
+Ace Leadership High School	Albuquerque	Bernalillo
+Alamo Navajo Community School	Alamo	Socorro County
+Alamogordo Public Schools	Alamogordo	Otero County
+Albuquerque Collegiate Charter School	Albuquerque	Bernalillo County
+Albuquerque Institute Of Math & Science	Albuquerque	Bernalillo County
+Albuquerque Public Schools	Albuquerque	Bernalillo County
+Aldo Leopold Charter	Silver City	Grant County
+Alma d'Arte Charter	Las Cruces	Doña Ana County
+Altura Preparatory School	Albuquerque	Bernalillo County
+Amy Biehl Charter High School	Albuquerque	Bernalillo County
+Animas Public Schools	Animas	Hidalgo County
+Anthony Charter School	Anthony	Doña Ana
+Artesia Public Schools	Artesia	Eddy County
+Atsa' Biya'a'zh Community School	Shiprock	San Juan County
+Aztec Municipal Schools	Aztec	San Juan County
+Baca-dlo'ay Azhi Community School	Prewitt	McKinley County
+Beclabito Day School	Shiprock	San Juan County
+Belen Consolidated Schools	Belen	Valencia County
+Bernalillo Public Schools	Bernalillo	Sandoval County
+Bloomfield Municipal Schools	Bloomfield	San Juan County
+Borrego Pass	Crownpoint	McKinley County
+Bread Springs Day School	Gallup	McKinley County
+Capitan Municipal Schools	Capitan	Lincoln County
+Carinos De Los Ninos	Española	Rio Arriba
+Carlsbad Municipal Schools	Carlsbad	Eddy County
+Carrizozo Municipal Schools	Carrizozo	Lincoln County
+Central Consolidated Schools	SHIPROCK	San Juan County
+Cesar Chavez Community Center	Albuquerque	Bernalillo County
+Ch'ooshgai Community School	Tohatchi	McKinley County
+Chama Valley Independent Schools	TIERRA AMARILLA	Rio Arriba County
+Chi Chil'tah Comm School	Vanderwagen	McKinley County
+Childrens Psyc School District	Albuquerque	Bernalillo County
+Cien Aguas International School	Albuquerque	Bernalillo
+Cimarron Public Schools	Cimarron	Colfax County
+Clayton Public Schools	Clayton	Union County
+Cloudcroft Municipal Schools	CLOUDCROFT	Otero County
+Clovis Municipal Schools	Clovis	Curry County
+Cobre Consolidated Schools	Bayard	Grant County
+Coral Community Charter	Albuquerque	Bernalillo County
+Corona Municipal Schools	Corona	Lincoln County
+Crystal Boarding School	Navajo	San Juan County
+Cuba Independent Schools	Cuba	Sandoval County
+Deming Public Schools	Deming	Luna County
+Des Moines Municipal Schools	Des Moines	Union County
+Dexter Consolidated Schools	Dexter	Chaves County
+Dora Consolidated Schools	Dora	Roosevelt County
+Dream Dine	Shiprock	San Juan County
+Dulce Independent Schools	Dulce	Rio Arriba County
+Dzilth-Na-O-Dith-Hle Community School	Bloomfield	San Juan County
+Dzit Dit Lool School Of Empowerment Action And Perseverance	Navajo	McKinley County
+East Mtn High School	Sandia Park	Bernalillo
+Elida Municipal Schools	Elida	Roosevelt County
+Española Municipal Schools	Española	Rio Arriba County
+Estancia Municipal Schools	Estancia	Torrance County
+Estancia Valley Classical Academy	Moriarty	Torrance County
+Eunice Municipal Schools	Eunice	Lea County
+Explore Academy	Albuquerque	Bernalillo County
+Farmington Municipal Schools	Farmington	San Juan County
+Floyd Municipal Schools	Floyd	Roosevelt County
+Fort Sumner Municipal Schools	Fort Sumner	De Baca County
+Gadsden Independent Schools	Anthony	Doña Ana County
+Gallup-McKinley County Schools	Gallup	McKinley County
+Gilbert L Sena Charter High School	Albuquerque	Bernalillo County
+Grady Municipal Schools	Grady	Curry County
+Grants-Cibola County Schools	Grants	Cibola County
+Hagerman Municipal Schools	Hagerman	Chaves County
+Hanaa'dli Community School	Bloomfield	San Juan County
+Hatch Valley Municipal Schools	Hatch	Doña Ana County
+Hobbs Municipal Schools	Hobbs	Lea County
+Hondo Valley Public Schools	Hondo	Lincoln County
+Horizon Academy West	Albuquerque	Bernalillo County
+House Municipal Schools	House	Quay County
+Hozho Academy	Gallup	McKinley County
+International School At Mesa Del Sol	Albuquerque	Bernalillo
+Isleta Elementary School	Albuquerque	Bernalillo County
+J Paul Taylor Academy	Las Cruces	Doña Ana County
+Jal Public Schools	Jal	Lea County
+Jemez Day School	Jemez Pueblo	Sandoval County
+Jemez Mountain Public Schools	Cuba	Rio Arriba County
+Jemez Valley Public Schools	Jemez Pueblo	Sandoval County
+Juvenile Justice	Albuquerque	Bernalillo County
+Kha'p'o Community School (Santa Clara)	Española	Rio Arriba County
+La Academia Dolores Huerta	Las Cruces	Doña Ana County
+La Promesa Early Learning	Albuquerque	Bernalillo County
+La Resolana Leadership	Albuquerque	Bernalillo
+La Tierra Montessori School Of The Arts And Sciences	Española	Rio Arriba County
+Laguna Elementary School	Laguna	Cibola County
+Laguna Middle School	Laguna	Cibola County
+Lake Arthur Municipal Schools	Lake Arthur	Chaves County
+Lake Valley Navajo School	Crownpoint	San Juan County
+Las Cruces Public Schools	Las Cruces	Doña Ana County
+Las Montanas Charter	Las Cruces	Doña Ana County
+Las Vegas City Public Schools	Las Vegas	San Miguel County
+Logan Municipal Schools	Logan	Quay County
+Lordsburg Municipal Schools	Lordsburg	Hidalgo County
+Los Alamos Public Schools	Los Alamos	Los Alamos County
+Los Lunas Public Schools	Los Lunas	Valencia County
+Loving Municipal Schools	Loving	Eddy County
+Lovington Public Schools	Lovington	Lea County
+Magdalena Municipal Schools	Magdalena	Socorro County
+Mariano Lake Community School	Crownpoint	McKinley County
+Maxwell Municipal Schools	Maxwell	Colfax County
+Mccurdy Charter School	Española	Santa Fe County
+Media Arts Charter	Albuquerque	Bernalillo County
+Melrose Public Schools	Melrose	Curry County
+Mesa Vista Consolidated Schools	OJO CALIENTE	Rio Arriba County
+Mescalero Apache School	Mescalero	Otero County
+Mission Achievement And Success	Albuquerque	Bernalillo County
+Monte Del Sol Charter	Santa Fe	Santa Fe County
+Montessori Elementary School	Albuquerque	Bernalillo County
+Mora Independent Schools	Mora	Mora County
+Moriarty Municipal Schools	Moriarty	Torrance County
+Mosquero Municipal Schools	Mosquero	Harding County
+Mountainair Public Schools	Mountainair	Torrance County
+Na' Neelzhiin Ji'Olta (Torreon) School District	Cuba	Sandoval County
+Navajo Preparatory School	Farmington	San Juan County
+Nenahnezad Community School	Fruitland	San Juan County
+New America School	Albuquerque	Bernalillo County
+New America School - Las Cruces	Las Cruces	Doña Ana County
+New Mexico Connections Academy	Santa Fe	Santa Fe County
+Nm Corrections	Albuquerque	Bernalillo County
+Nm School For Arts	Santa Fe	Santa Fe County
+North Valley Charter	Los Ranchos de Albuquerque	Bernalillo County
+Northwest High School	Shiprock	San Juan County
+Ohkay Owingeh Community School	Ohkay Owingeh	Rio Arriba County
+Ojo Encino Day School	Cuba	Sandoval County
+Pecos Independent Schools	PECOS	Torrance County
+Peñasco Independent Schools	Peñasco	Taos County
+Pine Hill Schools	Pine Hill	Cibola County
+Pojoaque Valley Public Schools	SANTA FE	Santa Fe County
+Portales Municipal Schools	Portales	Roosevelt County
+Pueblo Pintado Community School	Cuba	McKinley County
+Quemado Independent Schools	Quemado	Catron County
+Questa Independent Schools	Questa	Taos County
+Raton Public Schools	Raton	Colfax County
+Red River Valley Charter School	Red River	Taos County
+Reserve Independent Schools	Reserve	Catron County
+Rio Rancho Public Schools	Rio Rancho	Sandoval County
+Roots And Wings Community	Questa	Taos County
+Roswell Independent Schools	Roswell	Chaves County
+Roy Municipal Schools	Roy	Harding County
+Ruidoso Municipal Schools	Ruidoso	Lincoln County
+Sage Montessori Charter School	Albuquerque	Bernalillo
+San Felipe Pueblo Elementary School	San Felipe Pue.	Sandoval County
+San Ildefonso Day School	Santa Fe	Santa Fe County
+San Jon Municipal Schools	SAN JON	Quay County
+Sandoval Academy of Bilingual Education	Rio Rancho	Sandoval County
+Sanostee Day School	Sanostee	San Juan County
+Santa Fe Indian School	Santa Fe	Santa Fe County
+Santa Fe Public Schools	Santa Fe	Santa Fe County
+Santa Rosa Consolidated Schools	Santa Rosa	Guadalupe County
+School Of Dreams Academy	Los Lunas	Valencia County
+Sequoyah School District	Albuquerque	Bernalillo County
+Silver City Consolidated Schools	Silver City	Grant County
+Six Directions Indigenous School	Gallup	McKinley County
+Sky City Community School	Pueblo of Acoma	Cibola County
+Socorro Consolidated Schools	Socorro	Socorro County
+Solare Collegiate Charter School	Albuquerque	Bernalillo County
+South Valley Prep	Albuquerque	Bernalillo County
+Southwest Intermediate Learning Center	Albuquerque	Bernalillo
+Southwest Primary Learning Center	Albuquerque	Bernalillo County
+Southwest Secondary Learning Center	Albuquerque	Bernalillo County
+Springer Municipal Schools	Springer	Colfax County
+SW Aeronautics Mathematics And Science Academy	Albuquerque	Bernalillo County
+Truth or Consequences Schools	T OR C	Sierra County
+T'Iists'oozi'bi'olta School District	Crownpoint	McKinley County
+Taos Academy	Taos	Taos County
+Taos Day School	Taos	Taos County
+Taos Integrated School Of The Arts	Taos	Taos County
+Taos International School	Taos	Taos County
+Taos Municipal Schools	Taos	Taos County
+Tatum Municipal Schools	Tatum	Lea County
+Te Tsu Geh Oweenge Day School	Santa Fe	Santa Fe County
+Texico Municipal Schools	Texico	Curry County
+The Ask Academy	Rio Rancho	Sandoval County
+The Great Academy	Albuquerque	Bernalillo County
+The Master Program	Santa Fe	Santa Fe County
+Tierra Adentro	Albuquerque	Bernalillo County
+Tierra Encantada Charter School	Santa Fe	Santa Fe County
+To'hajiilee Day School	ToHajiilee	Bernalillo County
+Tohaali' Community School	Newcomb	San Juan County
+Tse'ii'ahi' Community School	Crownpoint	McKinley County
+Tucumcari Public Schools	Tucumcari	Quay County
+Tularosa Municipal Schools	Tularosa	Otero County
+Turquoise Trail Charter School	Santa Fe	Santa Fe County
+T`siya Day School	Zia Pueblo	Sandoval County
+Uplift Community School	Gallup	McKinley
+Vaughn Municipal Schools	Vaughn	Guadalupe County
+Wagon Mound Public Schools	Wagon Mound	Mora County
+Walatowa Charter High	JEMEZ PUEBLO	Sandoval County
+West Las Vegas Public Schools	Las Vegas	San Miguel County
+William W & Josephine Dorn Charter Community School	Albuquerque	Bernalillo
+Wingate Elementary School	Ft. Wingate	McKinley County
+Wingate High School	Fort Wingate	McKinley County
+Zuni Public Schools	Zuni	McKinley County
