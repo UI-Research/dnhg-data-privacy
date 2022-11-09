@@ -12,7 +12,7 @@ post_processing <- function(x) {
   # Number of factors
   p <- length(x) - 1
   
-  x[1] <- replace(x[1], x[1] < max(x[2:p]), max(x[2:p]))
+  x[1] <- replace(x[1], x[1] <= max(x[2:p]), max(x[2:p]))
   
   dat_x <- x  
   
