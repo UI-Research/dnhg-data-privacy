@@ -20,13 +20,13 @@ format:
     highlight-style: pygments
 editor_options: 
   chunk_output_type: console
+execute: 
+  echo: false
 ---
 
 This Quarto Document walks through "Do No Harm Guide: Applying Equity Awareness in Data Privacy Methods".
 
 **Disclaimer:** These analyses are inspired by real data and public policy analytics, but are *not* representative of them.
-
-
 
 ```{r}
 #| label: load-pkgs
@@ -46,6 +46,7 @@ cl <- makeCluster(detectCores() - 4)
 clusterCall(cl, function() lapply(c("doParallel", "tidyverse"), require, character.only = TRUE))
 registerDoParallel(cl)
 set_urbn_defaults(style = "print")
+
 ```
 
 ## Data
@@ -193,7 +194,7 @@ set.seed(20230128)
 n <- 10
 
 # Synthetic New Mexico Data
-temp <- parLapply(cl, 1:n, function(x) synth(nm_counts))
+temp <- foreach(i=1:n) %dopar% synth(nm_counts)
 nm_synth <- temp[[1]]
 
 for(i in 2:n) {
@@ -202,7 +203,7 @@ for(i in 2:n) {
 nm_synth[, 2:ncol(nm_counts)] <- nm_synth[, 2:ncol(nm_counts)] / n
 
 # Synthetic Pennsylvania Data
-temp <- lapply(1:n, function(x) synth(pa_counts))
+temp <- foreach(i=1:n) %dopar% synth(pa_counts)
 pa_synth <- temp[[1]]
 
 for(i in 2:n) {
@@ -238,7 +239,7 @@ source("rcode/lap-san.R")
 set.seed(20230128)
 n <- 10
 
-eps <- 0.1
+eps <- 0.01
 
 # Differentially private synthetic New Mexico Data
 temp <- lapply(1:n, function(x) lap_san(nm_counts, eps))
@@ -258,88 +259,69 @@ for(i in 2:n) {
 }
 pa_dp[, 2:ncol(pa_counts)] <- pa_dp[, 2:ncol(pa_counts)] / n
 
-# Increasing epsilon
-eps <- 0.5
-
-# Differentially private synthetic New Mexico Data
-temp <- lapply(1:n, function(x) lap_san(nm_counts, eps))
-nm_dp5 <- temp[[1]]
-
-for(i in 2:n) {
-  nm_dp5[, 2:ncol(nm_counts)] <- nm_dp5[, 2:ncol(nm_counts)] + temp[[i]][, 2:ncol(nm_counts)]
-}
-nm_dp5[, 2:ncol(nm_counts)] <- nm_dp5[, 2:ncol(nm_counts)] / n
-
-# Differentially private synthetic Pennsylvania Data
-temp <- lapply(1:n, function(x) lap_san(pa_counts, eps))
-pa_dp5 <- temp[[1]]
-
-for(i in 2:n) {
-  pa_dp5[, 2:ncol(pa_counts)] <- pa_dp5[, 2:ncol(pa_counts)] + temp[[i]][, 2:ncol(pa_counts)]
-}
-pa_dp5[, 2:ncol(pa_counts)] <- pa_dp5[, 2:ncol(pa_counts)] / n
-
 ```
 
-## Box and Whisker Plot
+## Line Plots
 We first look at how the values for each factor are distributed. Specifically, we examine the distribution of the share of students in poverty since the Urban report looked at poverty levels.
 
 ### New Mexico Poverty
 
 ```{r}
-#| label: fig-nm-box
-#| fig-cap: "Boxplots for Poverty across School Districts in New Mexico"
+#| label: fig-nm-line
+#| fig-cap: "Comparing Poverty Rates across School Districts in New Mexico"
 #| warning: false
 #| message: false
 
-# Box Plots
+# Creating the line plot
 original <- data_nm %>% 
-  dplyr::select(poverty) %>%
-  bind_cols(Method = "Orignal")
-supp <- nm_supp[[k]] %>% 
-  dplyr::select(poverty) %>%
-  bind_cols(Method = "Suppression")
-synth <- nm_synth %>% 
-  dplyr::select(poverty) %>%
-  bind_cols(Method = "Synthetic")
+  dplyr::select(poverty)
 dp <- nm_dp %>% 
-  dplyr::select(poverty) %>%
-  bind_cols(Method = "DP")
+  dplyr::select(poverty)
 
-box_data <- bind_rows(original, supp, synth, dp) %>%
-  mutate(Method = fct_relevel(Method, 
-            "Original", "Suppression", "Synthetic", "DP"))
+line_data <- bind_cols(original, dp)
+names(line_data) <- c("Original", "DP")
 
-ggplot(box_data, aes(x = Method, y = poverty, fill = Method)) + geom_boxplot()
+ggplot(line_data, aes(Original, DP)) +
+  geom_abline() +
+  geom_point(alpha = 0.2) +
+  coord_equal() +
+  scale_x_continuous(limits = c(0, 1)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(
+    title = "Comparing Poverty Rates across School Districts in New Mexico",
+    x = "Original Data Values",
+    y = "Differentially Private Values"
+  )
 ```
 
 ### Pennsylvania Poverty
 
 ```{r}
-#| label: fig-pa-box
-#| fig-cap: "Boxplots for Poverty across School Districts in Pennsylvania"
+#| label: fig-pa-line
+#| fig-cap: "Comparing Poverty Rates across School Districts in Pennsylvania"
 #| warning: false
 #| message: false
 
-# Box Plots
+# Creating the line plot
 original <- data_pa %>% 
-  dplyr::select(poverty) %>%
-  bind_cols(Method = "Orignal")
-supp <- pa_supp[[k]] %>% 
-  dplyr::select(poverty) %>%
-  bind_cols(Method = "Suppression")
-synth <- pa_synth %>% 
-  dplyr::select(poverty) %>%
-  bind_cols(Method = "Synthetic")
+  dplyr::select(poverty)
 dp <- pa_dp %>% 
-  dplyr::select(poverty) %>%
-  bind_cols(Method = "DP")
+  dplyr::select(poverty)
 
-box_data <- bind_rows(original, supp, synth, dp) %>%
-  mutate(Method = fct_relevel(Method, 
-            "Original", "Suppression", "Synthetic", "DP"))
+line_data <- bind_cols(original, dp)
+names(line_data) <- c("Original", "DP")
 
-ggplot(box_data, aes(x = Method, y = poverty, fill = Method)) + geom_boxplot()
+ggplot(line_data, aes(Original, DP)) +
+  geom_abline() +
+  geom_point(alpha = 0.2) +
+  coord_equal() +
+  scale_x_continuous(limits = c(0, 1)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(
+    title = "Comparing Poverty Rates across School Districts in Pennsylvania",
+    x = "Original Data Values",
+    y = "Differentially Private Values"
+  )
 ```
 
 ## Correlation Matrix
