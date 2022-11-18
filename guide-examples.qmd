@@ -28,6 +28,13 @@ This Quarto Document walks through "Do No Harm Guide: Applying Equity Awareness 
 
 **Disclaimer:** These analyses are inspired by real data and public policy analytics, but are *not* representative of them.
 
+CMB TO DO:
+
+- Overlap DP plots with both New Mexico and PA.
+- Change epsilon values.
+- Increase font size on line plots.
+- Update labels on correlation plot
+
 ```{r}
 #| label: load-pkgs
 #| code-summary: "Packages"
@@ -42,6 +49,7 @@ library(urbnthemes) # for ggplot2 theme
 library(tigris)     # for census shape files
 library(doParallel) # for parallel computing
 
+# Code for parallel computing
 cl <- makeCluster(detectCores() - 4)
 clusterCall(cl, function() lapply(c("doParallel", "tidyverse"), require, character.only = TRUE))
 registerDoParallel(cl)
@@ -51,14 +59,13 @@ set_urbn_defaults(style = "print")
 
 ## Data
 
-The data are from a Urban research report called, "[Mapping Student Needs during COVID-19](https://www.urban.org/research/publication/mapping-student-needs-during-covid-19)" and can be accessed at [Urban Data Catalog](https://datacatalog.urban.org/dataset/household-conditions-geographic-school-district). The purpose of the research is to "...highlight different types of challenges to remote learning and point to district and educator strategies that mitigate harm to students as districts navigate long-term school closures."
+Our illustrative example comes from an Urban Institute research report called, "[Mapping Student Needs during COVID-19](https://www.urban.org/research/publication/mapping-student-needs-during-covid-19)" and can be accessed at [Urban Data Catalog](https://datacatalog.urban.org/dataset/household-conditions-geographic-school-district). The purpose of the research is to “…highlight different types of challenges to remote learning and point to district and educator strategies that mitigate harm to students as districts navigate long-term school closures.” In addition to poverty, the researchers examined six other factors: linguistic isolation, child disability status, parents in vulnerable economic sectors, single parent, crowded conditions, and lack of computer or broadband access. See report for how they define these factors.
 
-In addition to poverty, the researchers focused on six other factors: linguistic isolation, child disability status, parents in vulnerable economic sectors, single parent, crowded conditions, and lack of computer or broadband access. The researchers used 2014 through 2018 data from the American Community Survey (ACS) to conduct their analyses.
+### Confidential Data and Ground Truth Data
+The researchers used 2014 through 2018 data from the American Community Survey  to conduct their analyses. The researchers used two versions of the American Community Survey, but we focus on one and treat the data as the confidential data. We define the confidential data as the cleaned version (meaning edited for inaccuracies or inconsistencies). Researchers often refer to this version of the data as the gold standard or actual data for analysis. The published American Community Survey data are public data that have undergone SDP protections prior to being published. Because we do not have access to the originally collected data, we create our own ground truth data that are the student level based on the American Community Survey data.
 
-### Confidential Data (Gold Standard Data)
-The ACS is a "...nationally representative one percent survey conducted annually by the US Census Bureau, containing data on households, demographics, economic circumstances, education, housing conditions, and more." The researchers used two versions of the ACS. We use one of the datasets and treat the data as the confidential data. We define the confidential data as the cleaned version (meaning edited for inaccuracies or inconsistencies) of the data; often referred to as the gold standard or actual data for analysis.
+The data set is the 2014 through 2018 five-year estimate from the National Historical Geographic Information System. The National Historical Geographic Information System data has the seven variables of interest as proportions with margins of error. For simplicity, we assume the proportions are the true values and create another version of the data into tabular values based on those proportions. We then readjust the values to ensure there are whole counts and used these values to create microlevel data. We will refer to the microlevel data (and the related tabular data) as the “ground truth” data for the chapter. For this guide, we highlight two states, New Mexico and Pennsylvania. We pick these states because they vary greatly in population density and the proportion of the seven variables, which demonstrates how population density affect statistical data privacy results.
 
-The dataset we used is the 2014 through 2018 five year estimate from the National Historical Geographic Information System (NHGIS). The NHGIS data has the seven variables of interest as proportions with margins of error. For simplicity, we assume the proportions are the true values and create another version of the data into tabular values based on those proportions. We then readjust the values to ensure there is whole counts. For this guide, we focus on two states, New Mexico and Pennsylvania, because these states vary greatly in population density and the proportion of the seven variables.
 
 **Note that we apply these data to multiple analyses that are inspired from the original Urban report, but are not the original analyses.**
 
@@ -127,14 +134,17 @@ pa_counts <- data_pa %>%
 ### Statistical Disclosure Control Methods
 In this section, we apply the current three most popular data privacy and confidentiality methods:
 
-  1. **Suppression** - removing values via k-anonymity.
-  2. **Synthetic Data** - replicating the confidential data based on a statistically representative model to generate pseudo or fake data records
-  3. **Noise infusion** - differential privacy or differentially private method
+  1. **Suppression** - removing values
+  2. **Synthetic Data** - replicating the confidential data based on a statistically representative model to generate pseudo or fake data recordss
+  3. **Noise infusion** - adding noise using a differentially private method
 
 #### Suppression
-Suppression, or not reporting certain values from the data, is one of the earliest and easiest statistical disclosure control methods. A version of suppression is $k$-anonymity, which requires that any released data set contain at least $k$ observations for each combination of possibly identifying variables (e.g., age, sex, or race). We can alter or suppress the data to achieve a certain level of $k$-anonymity.
+Suppression, or not reporting certain values from the data, is one of the earliest and easiest statistical disclosure control methods. For example, if two African American women live in Santa Fe County in New Mexico, then we would want to suppress or not report those people because they could be easily identified. The rules for determining the threshold for suppression vary based on data privacy laws, data type, and many other factors.
 
-In our case, we will suppress the data up to $k$ = 10 for each of the seven factors. Typically, $k$ = 3, but we picked the upper bound to be a higher value because the data we are treating as the confidential data has been altered for privacy. However, in one of our examples, we show how changing the value of $k$ affects the data privacy-utility trade-off.
+A common version of suppression is designed to satisfy k-anonymity (Sweeney, 2002), which requires that any released data set contain at least k observations for each combination of possibly identifying variables (e.g., age, sex, or race). We can alter or suppress either rows or columns of the data to achieve a certain level of k-anonymity.
+
+For our illustrative example, we will suppress the data up to k = 10 for each of the seven factors. Typical applications use lower values of k, such as k = 3 or 5, but we pick a higher value because the data we are treating as the confidential data has already been altered for privacy.
+As mentioned earlier, an advantage of suppression is the method is quick and simple to implement. Also, values above k are unaltered, improving utility for those values. A disadvantage is that no information is provided for the values at or below k, which might be essential for some analyses.
 
 ```{r}
 #| label: suppression
@@ -155,25 +165,17 @@ pa_supp <- lapply(1:k, function(x) k_suppresion(pa_counts, x))
 ```
 
 #### Synthetic Data
-Synthetic data consists of pseudo or “fake” records that are statistically representative of the confidential data. Records are considered synthesized when they are replaced with draws from a model fitted to the confidential data.
-
-Fully synthetic data synthesizes all values in the dataset with imputed amounts, which means the data no longer directly map onto the confidential records. Since fully synthetic data does not contain any actual observations, the synthetic data protects against both attribute and identity disclosure risks.
-
+Synthetic data consists of pseudo or “fake” records that are statistically representative of the confidential data. Records are considered synthesized when they are replaced with draws from a model fitted to the confidential data. Statisticians originally developed synthetic data as a conceptually extension of multiple imputation (Rubin 1993). Multiple imputation is used to address missing data in clinical trial scenarios and nonresponses in surveys by developing a model based on the remaining participants’ information to create new observations or values for the missing data. Synthetic data extends this concept to generating entirely new records for individuals to be released in place of the original records. The idea of synthetic data is attractive to several federal agencies because the synthetic data contain only “fake” records.
 There are generally two ways of generating synthetic data: parametric and nonparametric.
 
- - Parametric models assume a finite number of parameters that capture the complexity of the data.
- - They are generally less flexible, but more interpretable than nonparametric models.
- - Examples: regression to assign an age variable, sampling from a probability distribution, Bayesian models, copula based models.
+Parametric models assume a finite number of parameters that capture the complexity of the data. They are generally less flexible, but more interpretable than nonparametric models. Some examples include using a regression model to assign an age variable, sampling from a probability distribution, Bayesian models, copula-based models.
 
-Nonparametric data synthesis is the process of data generation that is not based on assumptions about an underlying distribution or model.
+Nonparametric data synthesis is the process of data generation that is not based on assumptions about an underlying distribution or model. Nonparametric methods often use frequency proportions or marginal probabilities as weights for some type of sampling scheme. They are generally more flexible, but less interpretable than parametric models. One example is assigning gender based on underlying proportions. Another example is applying a classification and regression trees or more commonly known as CART model.
 
- - Often, nonparametric methods use frequency proportions or marginal probabilities as weights for some type of sampling scheme.
- - They are generally more flexible, but less interpretable than parametric models.
- - Examples: assigning gender based on underlying proportions, CART (Classification and Regression Trees) models, RNN models, etc.
+We will generate fully synthetic data via a nonparametric model (Reiter 2005; Drechsler and Reiter 2011) for each factor and total children count. We have a postprocessing step (i.e., ensuring the results of the statistic or information are consistent with realistic constraints) to ensure that the total count is greater than or equal to max count of any factor. We also assume zeros (i.e., if there is a zero in the data, we do not alter it).
 
-We will generate fully synthetic data via a nonparametric model for each factor and total children count. We have a postprocessing step (i.e., ensuring the results of the statistic or information are consistent with realistic constraints) to ensure that the total count is greater than or equal to max count of any factor. We also assume zeros (i.e., if there is a zero in the data, we do not alter it).
+An advantage for synthetic data generation in our illustrative example is that we can report values for all school districts instead of removing some in the case of suppression. A drawback to this approach is that values are model dependent and could lead to improperly replicating the data for particular analyses. In our case, we first synthesize the total children count before we synthesize each variable individually as proportions. 
 
-A drawback to this approach is that we are synthesizing each variable individually. The univariate properties will likely be preserved, but not the multivariate.
 
 ```{r}
 #| label: synthetic
@@ -216,13 +218,16 @@ stopCluster(cl)
 ```
 
 #### DP synthetic - Laplace sanitizer
-At a high level, differential privacy (DP) is a strict mathematical definition that a method must satisfy (or meet the mathematical conditions) to be considered differentially private, not a statement or description of the data itself. 
+Another approach to protect confidential data is adding random noise (i.e., adding or subtracting random values drawn from a probability distribution). One way to add noise or alter values in data is applying a method that satisfies differential privacy (DP) (Dwork et al. 2006). At a high level, DP is a strict mathematical definition that a method must satisfy (or meet the mathematical conditions) to be considered differentially private, not a statement or description of the data itself. Using methods that satisfy DP helps to quantify the relative privacy protections offered by adding different amounts of noise. 
 
-A sanitizer that satisfies DP is the Laplace mechanism, which adds noise by drawing values from a Laplace distribution. The Laplace distribution is centered at zero and the distribution variability (i.e., wide or narrow the distribution is) is the ratio of the privacy loss budget, $\epsilon$, over the sensitivity of the target statistics. Having the distribution centered at zero means there is a higher probability of adding very little or no noise to the confidential data statistics. For the noise variability, if $\epsilon$ is large or the sensitivity of the statistic is low, then there is a higher probability of adding very little noise to confidential data statistic. If $\epsilon$ is small or the sensitivity of the statistic probability of adding a lot of noise to the released statistic.
+A method that satisfies DP is the Laplace mechanism, which adds noise by drawing values from a Laplace distribution. The Laplace distribution is centered at zero and the distribution variability (i.e., wide or narrow the distribution is) is the ratio of the privacy loss budget, ϵ, over the sensitivity of the target statistics. Having the distribution centered at zero means there is a higher probability of adding very little or no noise to the confidential data statistics. For the noise variability, if $\epsilon$ is large or the sensitivity of the statistic is low, then there is a higher probability of adding very little noise to confidential data statistic. If $\epsilon$ is small or the sensitivity of the statistics is high, then there is a higher probability of adding a lot of noise to the released statistic.
 
-For our example, we will add Laplace noise to each count and normalize to the totals. In other words, we assume the total counts are invariant (i.e., no change to the statistics). We will test for $\epsilon$ = 1.
+For our example, we will add Laplace noise to each count and normalize to the totals. In other words, we assume the total counts are invariant (i.e., no change to the statistics). We will test for $\epsilon$ = 0.01, which is a value comparable to some real-world applications for tabular data sets, such as the 2020 Decennial Census.
 
 Similar to the synthetic data method, we have a postprocessing step to ensure that the total count is greater than or equal to max count of any factor. We also assume zeros.
+
+DP methods that create synthetic data have similar advantages and disadvantages as synthetic data generation methods. The main difference is that DP methods can account for privacy loss. 
+
 
 ```{r}
 #| label: dp-laplace
@@ -261,7 +266,7 @@ pa_dp[, 2:ncol(pa_counts)] <- pa_dp[, 2:ncol(pa_counts)] / n
 
 ```
 
-## Line Plots
+## Scatter Plots
 We first look at how the values for each factor are distributed. Specifically, we examine the distribution of the share of students in poverty since the Urban report looked at poverty levels.
 
 ### New Mexico Poverty
@@ -289,7 +294,7 @@ ggplot(line_data, aes(Original, DP)) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(
     title = "Comparing Poverty Rates across School Districts in New Mexico",
-    x = "Original Data Values",
+    x = "Ground Truth Data Values",
     y = "Differentially Private Values"
   )
 ```
@@ -319,7 +324,7 @@ ggplot(line_data, aes(Original, DP)) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(
     title = "Comparing Poverty Rates across School Districts in Pennsylvania",
-    x = "Original Data Values",
+    x = "Ground Truth Data Values",
     y = "Differentially Private Values"
   )
 ```
@@ -392,7 +397,7 @@ cor_pa %>%
 ### Suppressed Data
 
 #### New Mexico
-For the New Mexico suppressed data, we see that "lack of computer or broadband access" is still the most correlated (0.61) with "single parent" is next (0.44). The overall L1 difference on the correlation matrix is 1.33.
+For the New Mexico suppressed data, we see that "lack of computer or broadband access" is still the most correlated (0.61) with "single parent" is next (0.44). The overall sum absolute bias on the correlation matrix is 1.33.
 
 ```{r}
 #| label: fig-cor-suppressed-nm
@@ -447,7 +452,7 @@ bias %>%
 ```
 
 #### Pennsylvania
-For the Pennsylvania suppressed data, we see that "single parent" is still the most correlated (0.71) with "children with disability" and "lack of computer or broadband access" next (0.52 and 0.48, respectively). These values are almost exactly the same as the original data, which is expected because Pennsylvania has a fairly dense population. The overall L1 difference on the correlation matrix is 0.21.
+For the Pennsylvania suppressed data, we see that "single parent" is still the most correlated (0.71) with "children with disability" and "lack of computer or broadband access" next (0.52 and 0.48, respectively). These values are almost exactly the same as the original data, which is expected because Pennsylvania has a fairly dense population. The overall sum absolute bias on the correlation matrix is 0.21.
 
 ```{r}
 #| label: fig-cor-suppressed-pa
@@ -631,6 +636,7 @@ ggplot() +
 ### Synthetic Data
 
 #### New Mexico
+
 ```{r}
 #| label: fig-map-nm-synth
 #| fig-cap: "Lack of Computer or Broadband Access in New Mexico"
@@ -657,7 +663,7 @@ temp <- schools_nm %>%
 
 bias <- data_broadband$no_computer_internet - data_nm$no_computer_internet
 
-bias %>% abs() %>% sum()
+bias %>% range()
 
 bias <- bind_cols(temp$geographic_school_district, bias)
 colnames(bias) <- c("geographic_school_district", "no_computer_internet")
@@ -681,11 +687,11 @@ ggplot() +
   geom_sf(bias,
           mapping = aes(fill = no_computer_internet),
           color = "#ffffff", size = 0.25) +
-  scale_fill_gradientn(colors = palette_urbn_diverging, labels = scales::percent, limits = c(-0.5, 0.5))
+  scale_fill_gradientn(colors = palette_urbn_diverging, labels = scales::percent, limits = c(-0.2, 0.2))
 ```
 
 #### Pennsylvania
-In Pennsylvania, the overall absolute difference is 0.587 for the share of students without access to a computer or broadband internet.
+
 ```{r}
 #| label: fig-map-pa-dp
 #| fig-cap: "Single Parent in Pennsylvania"
@@ -712,7 +718,7 @@ temp <- schools_pa %>%
 
 bias <- data_single$single_parent - data_pa$single_parent
 
-bias %>% abs() %>% sum()
+bias %>% range()
 
 bias <- bind_cols(temp$geographic_school_district, bias)
 colnames(bias) <- c("geographic_school_district", "single_parent")
@@ -736,5 +742,5 @@ ggplot() +
   geom_sf(bias,
           mapping = aes(fill = single_parent),
           color = "#ffffff", size = 0.25) +
-  scale_fill_gradientn(colors = palette_urbn_diverging, labels = scales::percent, limits = c(-0.5, 0.5))
+  scale_fill_gradientn(colors = palette_urbn_diverging, labels = scales::percent, limits = c(-0.2, 0.2))
 ```
