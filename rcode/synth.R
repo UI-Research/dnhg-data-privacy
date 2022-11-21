@@ -7,9 +7,9 @@
 # OUTPUTS:
 #     synth: synthetic data
 
-synth <- function(data) {
+synth <- function(data, alpha) {
   synth <- data[, -1] %>% 
-    apply(2, synth_count) %>% 
+    apply(2, synth_count, alpha) %>% 
     apply(1, post_processing) %>% 
     t() %>% as_tibble() %>%
     mutate(
