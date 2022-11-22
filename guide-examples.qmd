@@ -173,6 +173,9 @@ source("rcode/post_processing.R")
 source("rcode/synth.R")
 source("rcode/synth_fun.R")
 
+# Setting the seed  
+set.seed(20230128)
+
 # Code for parallel computing
 cl <- makeCluster(detectCores() - 4)
 clusterCall(cl, function() lapply(c("doParallel", "tidyverse"), require, character.only = TRUE)) %>% invisible()
@@ -184,9 +187,9 @@ clusterCall(cl, function() {source("rcode/post_processing.R")}) %>% invisible()
 clusterCall(cl, function() {source("rcode/synth.R")}) %>% invisible()
 clusterCall(cl, function() {source("rcode/synth_fun.R")}) %>% invisible()
 
-# Setting the seed and number of repetitions
-set.seed(20230128)
+# Number of repetitions
 n <- 10
+
 # Dirichlet Prior tuning parameter
 alpha <- c(0.1, 0.25, 0.5)
 
@@ -715,6 +718,6 @@ ggplot() +
           color = "#ffffff", size = 0.25) +
   scale_fill_gradientn(colors = palette_urbn_diverging, labels = scales::percent, limits = c(-0.25, 0.25)) + 
   labs(fill = "Single Parent Bias") +
-    facet_wrap(. ~ Alpha)
+    facet_wrap(. ~ Alpha, dir = "v")
 
 ```
