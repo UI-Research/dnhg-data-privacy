@@ -41,6 +41,7 @@ library(smoothmest) # for laplace distribution
 library(urbnthemes) # for ggplot2 theme
 library(tigris)     # for census shape files
 library(doParallel) # for parallel computing
+library(patchwork)  # for combining ggplots
 ```
 
 ## Data
@@ -240,15 +241,15 @@ pa_dp <- lapply(eps, function(x) dp_fun(pa_counts, x, n))
 ## Scatter Plots
 We first look at how the values for each factor are distributed. Specifically, we examine the distribution of the share of students in poverty since the Urban report looked at poverty levels.
 
-### New Mexico Poverty
+### New Mexico and Pennsylvania Poverty
 
 ```{r}
-#| label: fig-nm-line
+#| label: fig-scatter
 #| fig-cap: "Comparing Poverty Rates across School Districts in New Mexico"
 #| warning: false
 #| message: false
 
-# Creating the line plot
+# Creating the scatter plot for New Mexico
 original <- nm_prop %>% 
   dplyr::select(poverty) %>%
   as_vector() %>%
@@ -269,28 +270,20 @@ dp <- c(rep("0.01", n), rep("0.1", n), rep("1", n))
 points_data <- bind_cols(original, poverty, dp)
 names(points_data) <- c("Original", "Poverty", "Privacy")
 
-ggplot(points_data, aes(Original, Poverty)) +
+p1 <- ggplot(points_data, aes(Original, Poverty)) +
   geom_abline() +
-  geom_point(alpha = 0.2, aes(color = Privacy)) +
+  geom_point(alpha = 0.5, aes(color = Privacy)) +
   coord_equal() +
   scale_x_continuous(limits = c(0, 1)) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(
-    title = "Comparing Poverty Rates across School Districts in New Mexico",
+    title = "New Mexico",
     x = "Confidential Data Values",
-    y = "Differentially Private Values"
+    y = "Differentially Private Values",
+    color = "Privacy Loss Budget"
   )
-```
 
-### Pennsylvania Poverty
-
-```{r}
-#| label: fig-pa-line
-#| fig-cap: "Comparing Poverty Rates across School Districts in Pennsylvania"
-#| warning: false
-#| message: false
-
-# Creating the line plot
+# Creating the scatter plot for Pennsylvania
 original <- pa_prop %>% 
   dplyr::select(poverty) %>%
   as_vector() %>%
@@ -311,17 +304,32 @@ dp <- c(rep("0.01", n), rep("0.1", n), rep("1", n))
 points_data <- bind_cols(original, poverty, dp)
 names(points_data) <- c("Original", "Poverty", "Privacy")
 
-ggplot(points_data, aes(Original, Poverty)) +
+p2 <- ggplot(points_data, aes(Original, Poverty)) +
   geom_abline() +
-  geom_point(alpha = 0.2, aes(color = Privacy)) +
+  geom_point(alpha = 0.5, aes(color = Privacy)) +
   coord_equal() +
   scale_x_continuous(limits = c(0, 1)) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(
-    title = "Comparing Poverty Rates across School Districts in Pennsylvania",
+    title = "Pennsylvania",
     x = "Confidential Data Values",
-    y = "Differentially Private Values"
+    y = "Differentially Private Values",
+    color = "Privacy Loss Budget"
   )
+
+p1 + p2
+
+```
+
+### Pennsylvania Poverty
+
+```{r}
+#| label: fig-pa-line
+#| fig-cap: "Comparing Poverty Rates across School Districts in Pennsylvania"
+#| warning: false
+#| message: false
+
+
 ```
 
 ## Correlation Matrix
@@ -406,9 +414,6 @@ For the New Mexico suppressed data, we see that "lack of computer or broadband a
 ```{r}
 #| label: fig-cor-suppressed-nm
 #| fig-cap: "Correlations between Measures of Vulnerability across School Districts in New Mexico (Suppressed, k = 10)"
-#| fig-subcap:
-#|   - "Correlations (Suppressed, k = 10)"
-#|   - "Correlations Bias" 
 #| warning: false
 
 # Correlation values New Mexico
@@ -425,7 +430,7 @@ bias <- cor_pub - cor_nm
 bias %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
 
 # Correlation matrix for suppressed data
-cor_pub %>%
+p1 <- cor_pub %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
   mutate(
@@ -444,7 +449,7 @@ cor_pub %>%
   labs(fill = "Correlation")
 
 # Correlation matrix for suppressed data - original data
-bias %>%
+p2 <- bias %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
   mutate(
@@ -461,6 +466,9 @@ bias %>%
   scale_x_discrete(labels = var) + 
   scale_y_discrete(labels = rev(var)) + 
   labs(fill = "Correlation Bias")
+
+p1 + p2
+
 ```
 
 #### Pennsylvania
@@ -484,7 +492,7 @@ bias <- cor_pub - cor_pa
 bias %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
 
 # Correlation matrix for suppressed data
-cor_pub %>%
+p1 <- cor_pub %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
   mutate(
@@ -503,7 +511,7 @@ cor_pub %>%
   labs(fill = "Correlation")
 
 # Correlation matrix for suppressed data - original data
-bias %>%
+p2 <- bias %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
   mutate(
@@ -520,6 +528,8 @@ bias %>%
   scale_x_discrete(labels = var) + 
   scale_y_discrete(labels = rev(var)) + 
   labs(fill = "Correlation Bias")
+
+p1 + p2
 ```
 
 #### Privacy-Utility Curve
