@@ -1,7 +1,7 @@
 ################################################################################
 # 	Synthetic Data Wrapper
 ################################################################################
-# Function that is a wrapper for the synth-count.R
+# Function that is a wrapper for the synth_count.R
 # INPUTS:
 #     data: dataframe
 # OUTPUTS:

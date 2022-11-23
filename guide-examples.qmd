@@ -28,13 +28,6 @@ This Quarto Document walks through "Do No Harm Guide: Applying Equity Awareness 
 
 **Disclaimer:** These analyses are inspired by real data and public policy analytics, but are *not* representative of them.
 
-CMB TO DO:
-
-- Overlap DP plots with both New Mexico and PA.
-- Change epsilon values.
-- Increase font size on line plots.
-- Update labels on correlation plot
-
 ```{r}
 #| label: load-pkgs
 #| code-summary: "Packages"
@@ -48,35 +41,28 @@ library(smoothmest) # for laplace distribution
 library(urbnthemes) # for ggplot2 theme
 library(tigris)     # for census shape files
 library(doParallel) # for parallel computing
-
-# Code for parallel computing
-cl <- makeCluster(detectCores() - 4)
-clusterCall(cl, function() lapply(c("doParallel", "tidyverse"), require, character.only = TRUE))
-registerDoParallel(cl)
-set_urbn_defaults(style = "print")
-
+library(patchwork)  # for combining ggplots
 ```
 
 ## Data
 
 Our illustrative example comes from an Urban Institute research report called, "[Mapping Student Needs during COVID-19](https://www.urban.org/research/publication/mapping-student-needs-during-covid-19)" and can be accessed at [Urban Data Catalog](https://datacatalog.urban.org/dataset/household-conditions-geographic-school-district). The purpose of the research is to “…highlight different types of challenges to remote learning and point to district and educator strategies that mitigate harm to students as districts navigate long-term school closures.” In addition to poverty, the researchers examined six other factors: linguistic isolation, child disability status, parents in vulnerable economic sectors, single parent, crowded conditions, and lack of computer or broadband access. See report for how they define these factors.
 
-### Confidential Data and Ground Truth Data
-The researchers used 2014 through 2018 data from the American Community Survey  to conduct their analyses. The researchers used two versions of the American Community Survey, but we focus on one and treat the data as the confidential data. We define the confidential data as the cleaned version (meaning edited for inaccuracies or inconsistencies). Researchers often refer to this version of the data as the gold standard or actual data for analysis. The published American Community Survey data are public data that have undergone SDP protections prior to being published. Because we do not have access to the originally collected data, we create our own ground truth data that are the student level based on the American Community Survey data.
+### Confidential Data
+The researchers used 2014 through 2018 data from the American Community Survey  to conduct their analyses. The researchers used two versions of the American Community Survey, but we focus on one and treat the data as the confidential data. We define the confidential data as the cleaned version (meaning edited for inaccuracies or inconsistencies). Researchers often refer to this version of the data as the gold standard or actual data for analysis. The published American Community Survey data are public data that have undergone SDP protections prior to being published, but we treat this data as the confidential data.
 
-The data set is the 2014 through 2018 five-year estimate from the National Historical Geographic Information System. The National Historical Geographic Information System data has the seven variables of interest as proportions with margins of error. For simplicity, we assume the proportions are the true values and create another version of the data into tabular values based on those proportions. We then readjust the values to ensure there are whole counts and used these values to create microlevel data. We will refer to the microlevel data (and the related tabular data) as the “ground truth” data for the chapter. For this guide, we highlight two states, New Mexico and Pennsylvania. We pick these states because they vary greatly in population density and the proportion of the seven variables, which demonstrates how population density affect statistical data privacy results.
-
+The data set is the 2014 through 2018 five-year estimate from the National Historical Geographic Information System. The National Historical Geographic Information System data has the seven variables of interest as proportions with margins of error. For simplicity, we assume the proportions are the true values and create another version of the data into tabular values based on those proportions. For this guide, we highlight two states, New Mexico and Pennsylvania. We pick these states because they vary greatly in population density and the proportion of the seven variables, which demonstrates how population density affect statistical data privacy results.
 
 **Note that we apply these data to multiple analyses that are inspired from the original Urban report, but are not the original analyses.**
 
 ```{r}
-#| label: tabular-data
-#| code-summary: "tabular"
+#| label: data
+#| code-summary: "data"
 #| message: false
 #| warning: false
 
-# New Mexico Data
-data_nm <- read_excel("data/data/nhgis_district_data_var.xlsx") %>%
+# Proportions
+nm_prop <- read_excel("data/data/nhgis_district_data_var.xlsx") %>%
   filter(state == "New Mexico") %>%
   dplyr::select(
     geographic_school_district,
@@ -90,8 +76,7 @@ data_nm <- read_excel("data/data/nhgis_district_data_var.xlsx") %>%
     no_computer_internet
   )
 
-# Pennsylvania Data
-data_pa <- read_excel("data/data/nhgis_district_data_var.xlsx") %>%
+pa_prop <- read_excel("data/data/nhgis_district_data_var.xlsx") %>%
   filter(state == "Pennsylvania") %>%
   dplyr::select(
     geographic_school_district,
@@ -106,8 +91,8 @@ data_pa <- read_excel("data/data/nhgis_district_data_var.xlsx") %>%
   ) %>%
   head(-1) # Empty district
 
-# New Mexico Count Data
-nm_counts <- data_nm %>%
+# Tabular Data
+nm_counts <- nm_prop %>%
   mutate(
     poverty = round(poverty * children_5_17),
     linguistically_isolated = round(linguistically_isolated * children_5_17),
@@ -118,8 +103,7 @@ nm_counts <- data_nm %>%
     no_computer_internet = round(no_computer_internet * children_5_17)
   )
 
-# Pennsylvania Count Data
-pa_counts <- data_pa %>%
+pa_counts <- pa_prop %>%
   mutate(
     poverty = round(poverty * children_5_17),
     linguistically_isolated = round(linguistically_isolated * children_5_17),
@@ -129,13 +113,14 @@ pa_counts <- data_pa %>%
     crowded_conditions = round(crowded_conditions * children_5_17), 
     no_computer_internet = round(no_computer_internet * children_5_17)
   )
+
 ```
 
 ### Statistical Disclosure Control Methods
 In this section, we apply the current three most popular data privacy and confidentiality methods:
 
   1. **Suppression** - removing values
-  2. **Synthetic Data** - replicating the confidential data based on a statistically representative model to generate pseudo or fake data recordss
+  2. **Synthetic Data** - replicating the confidential data based on a statistically representative model to generate pseudo or fake data records
   3. **Noise infusion** - adding noise using a differentially private method
 
 #### Suppression
@@ -152,7 +137,7 @@ As mentioned earlier, an advantage of suppression is the method is quick and sim
 #| message: false
 #| warning: false
 
-source("rcode/k-suppression.R")
+source("rcode/k_suppression.R")
 
 k <- 10
 
@@ -184,34 +169,34 @@ An advantage for synthetic data generation in our illustrative example is that w
 #| warning: false
 
 # Synthetic data based on the proportions for each factor
-source("rcode/synth-count.R")
-source("rcode/post-processing.R")
+source("rcode/synth_count.R")
+source("rcode/post_processing.R")
 source("rcode/synth.R")
+source("rcode/synth_fun.R")
 
-clusterCall(cl, function() {source("rcode/synth-count.R")})
-clusterCall(cl, function() {source("rcode/post-processing.R")})
-clusterCall(cl, function() {source("rcode/synth.R")})
-
+# Setting the seed  
 set.seed(20230128)
+
+# Code for parallel computing
+cl <- makeCluster(detectCores() - 4)
+clusterCall(cl, function() lapply(c("doParallel", "tidyverse"), require, character.only = TRUE)) %>% invisible()
+registerDoParallel(cl)
+set_urbn_defaults(style = "print")
+
+clusterCall(cl, function() {source("rcode/synth_count.R")}) %>% invisible()
+clusterCall(cl, function() {source("rcode/post_processing.R")}) %>% invisible()
+clusterCall(cl, function() {source("rcode/synth.R")}) %>% invisible()
+clusterCall(cl, function() {source("rcode/synth_fun.R")}) %>% invisible()
+
+# Number of repetitions
 n <- 10
 
-# Synthetic New Mexico Data
-temp <- foreach(i=1:n) %dopar% synth(nm_counts)
-nm_synth <- temp[[1]]
+# Dirichlet Prior tuning parameter
+alpha <- c(0.1, 0.25, 0.5)
 
-for(i in 2:n) {
-  nm_synth[, 2:ncol(nm_counts)] <- nm_synth[, 2:ncol(nm_counts)] + temp[[i]][, 2:ncol(nm_counts)]
-}
-nm_synth[, 2:ncol(nm_counts)] <- nm_synth[, 2:ncol(nm_counts)] / n
-
-# Synthetic Pennsylvania Data
-temp <- foreach(i=1:n) %dopar% synth(pa_counts)
-pa_synth <- temp[[1]]
-
-for(i in 2:n) {
-  pa_synth[, 2:ncol(pa_counts)] <- pa_synth[, 2:ncol(pa_counts)] + temp[[i]][, 2:ncol(pa_counts)]
-}
-pa_synth[, 2:ncol(pa_counts)] <- pa_synth[, 2:ncol(pa_counts)] / n
+# Synthetic Data
+nm_synth <- lapply(alpha, function(x) synth_fun(nm_counts, x, n))
+pa_synth <- lapply(alpha, function(x) synth_fun(pa_counts, x, n))
 
 stopCluster(cl)
 
@@ -236,67 +221,104 @@ DP methods that create synthetic data have similar advantages and disadvantages 
 #| warning: false
 
 # Differentially private synthetic data based on the proportions for each factor.
-source("rcode/dp-count.R")
-source("rcode/helper-functions.R")
-source("rcode/post-processing.R")
-source("rcode/lap-san.R")
+source("rcode/dp_count.R")
+source("rcode/helper_functions.R")
+source("rcode/post_processing.R")
+source("rcode/lap_san.R")
+source("rcode/dp_data.R")
 
 set.seed(20230128)
 n <- 10
 
-eps <- 0.01
+eps <- c(0.01, 0.1, 1)
 
-# Differentially private synthetic New Mexico Data
-temp <- lapply(1:n, function(x) lap_san(nm_counts, eps))
-nm_dp <- temp[[1]]
-
-for(i in 2:n) {
-  nm_dp[, 2:ncol(nm_counts)] <- nm_dp[, 2:ncol(nm_counts)] + temp[[i]][, 2:ncol(nm_counts)]
-}
-nm_dp[, 2:ncol(nm_counts)] <- nm_dp[, 2:ncol(nm_counts)] / n
-
-# Differentially private synthetic Pennsylvania Data
-temp <- lapply(1:n, function(x) lap_san(pa_counts, eps))
-pa_dp <- temp[[1]]
-
-for(i in 2:n) {
-  pa_dp[, 2:ncol(pa_counts)] <- pa_dp[, 2:ncol(pa_counts)] + temp[[i]][, 2:ncol(pa_counts)]
-}
-pa_dp[, 2:ncol(pa_counts)] <- pa_dp[, 2:ncol(pa_counts)] / n
+# Differentially private synthetic data
+nm_dp <- lapply(eps, function(x) dp_fun(nm_counts, x, n))
+pa_dp <- lapply(eps, function(x) dp_fun(pa_counts, x, n))
 
 ```
 
 ## Scatter Plots
 We first look at how the values for each factor are distributed. Specifically, we examine the distribution of the share of students in poverty since the Urban report looked at poverty levels.
 
-### New Mexico Poverty
+### New Mexico and Pennsylvania Poverty
 
 ```{r}
-#| label: fig-nm-line
+#| label: fig-scatter
 #| fig-cap: "Comparing Poverty Rates across School Districts in New Mexico"
 #| warning: false
 #| message: false
 
-# Creating the line plot
-original <- data_nm %>% 
-  dplyr::select(poverty)
-dp <- nm_dp %>% 
-  dplyr::select(poverty)
+# Creating the scatter plot for New Mexico
+original <- nm_prop %>% 
+  dplyr::select(poverty) %>%
+  as_vector() %>%
+  rep(length(eps)) %>%
+  as_tibble()
 
-line_data <- bind_cols(original, dp)
-names(line_data) <- c("Original", "DP")
+poverty <- nm_dp[[1]] %>% 
+    dplyr::select(poverty)
+for(i in 2:length(eps)){
+  temp <- nm_dp[[i]] %>% 
+    dplyr::select(poverty)
+  poverty <- bind_rows(poverty, temp)
+}
 
-ggplot(line_data, aes(Original, DP)) +
+n <- nrow(nm_prop)
+dp <- c(rep("0.01", n), rep("0.1", n), rep("1", n))
+
+points_data <- bind_cols(original, poverty, dp)
+names(points_data) <- c("Original", "Poverty", "Privacy")
+
+p1 <- ggplot(points_data, aes(Original, Poverty)) +
   geom_abline() +
-  geom_point(alpha = 0.2) +
+  geom_point(alpha = 0.5, aes(color = Privacy)) +
   coord_equal() +
   scale_x_continuous(limits = c(0, 1)) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(
-    title = "Comparing Poverty Rates across School Districts in New Mexico",
-    x = "Ground Truth Data Values",
-    y = "Differentially Private Values"
+    title = "New Mexico",
+    x = "Confidential Data Values",
+    y = "Differentially Private Values",
+    color = "Privacy Loss Budget"
   )
+
+# Creating the scatter plot for Pennsylvania
+original <- pa_prop %>% 
+  dplyr::select(poverty) %>%
+  as_vector() %>%
+  rep(length(eps)) %>%
+  as_tibble()
+
+poverty <- pa_dp[[1]] %>% 
+    dplyr::select(poverty)
+for(i in 2:length(eps)){
+  temp <- pa_dp[[i]] %>% 
+    dplyr::select(poverty)
+  poverty <- bind_rows(poverty, temp)
+}
+
+n <- nrow(pa_prop)
+dp <- c(rep("0.01", n), rep("0.1", n), rep("1", n))
+
+points_data <- bind_cols(original, poverty, dp)
+names(points_data) <- c("Original", "Poverty", "Privacy")
+
+p2 <- ggplot(points_data, aes(Original, Poverty)) +
+  geom_abline() +
+  geom_point(alpha = 0.5, aes(color = Privacy)) +
+  coord_equal() +
+  scale_x_continuous(limits = c(0, 1)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(
+    title = "Pennsylvania",
+    x = "Confidential Data Values",
+    y = "Differentially Private Values",
+    color = "Privacy Loss Budget"
+  )
+
+p1 + p2
+
 ```
 
 ### Pennsylvania Poverty
@@ -307,26 +329,7 @@ ggplot(line_data, aes(Original, DP)) +
 #| warning: false
 #| message: false
 
-# Creating the line plot
-original <- data_pa %>% 
-  dplyr::select(poverty)
-dp <- pa_dp %>% 
-  dplyr::select(poverty)
 
-line_data <- bind_cols(original, dp)
-names(line_data) <- c("Original", "DP")
-
-ggplot(line_data, aes(Original, DP)) +
-  geom_abline() +
-  geom_point(alpha = 0.2) +
-  coord_equal() +
-  scale_x_continuous(limits = c(0, 1)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  labs(
-    title = "Comparing Poverty Rates across School Districts in Pennsylvania",
-    x = "Ground Truth Data Values",
-    y = "Differentially Private Values"
-  )
 ```
 
 ## Correlation Matrix
@@ -343,9 +346,12 @@ For New Mexico, we see that "lack of computer or broadband access" is most corre
 #| warning: false
 
 # Correlation values
-cor_nm <- data_nm[, -(1:2)] %>%
+cor_nm <- nm_prop[, -c(1:2)] %>%
   cor()
 cor_nm[upper.tri(cor_nm)] <- NA
+
+# Correlation variable names
+var <- c("Computer/Broadband", "Crowded Conditions", "Single Parent", "Vulnerable Economic Sectors", "Child Disability Status", "Linguistic Isolation", "Poverty")
 
 # Correlation matrix
 cor_nm %>%
@@ -357,11 +363,14 @@ cor_nm %>%
   ) %>%
   ggplot(aes(var1, var2, fill = correlation)) +
   geom_tile() + 
-  geom_text(aes(label = round(correlation, 2))) +
+  geom_text(aes(label = round(correlation, 2)), size = 4) +
   scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
   theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = NULL, y = NULL)
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL) + 
+  scale_x_discrete(labels = var) + 
+  scale_y_discrete(labels = rev(var)) + 
+  labs(fill = "Correlation")
 ```
 
 #### Pennsylvania
@@ -373,7 +382,7 @@ For Pennsylvania, we see that "single parent" is most correlated (0.71) with "ch
 #| warning: false
 
 # Correlation values
-cor_pa <- data_pa[, -(1:2)] %>%
+cor_pa <- pa_prop[, -(1:2)] %>%
   cor()
 cor_pa[upper.tri(cor_pa)] <- NA
 
@@ -387,11 +396,14 @@ cor_pa %>%
   ) %>%
   ggplot(aes(var1, var2, fill = correlation)) +
   geom_tile() + 
-  geom_text(aes(label = round(correlation, 2))) +
+  geom_text(aes(label = round(correlation, 2)), size = 4) +
   scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
   theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = NULL, y = NULL)
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL) + 
+  scale_x_discrete(labels = var) + 
+  scale_y_discrete(labels = rev(var)) + 
+  labs(fill = "Correlation")
 ```
 
 ### Suppressed Data
@@ -402,14 +414,13 @@ For the New Mexico suppressed data, we see that "lack of computer or broadband a
 ```{r}
 #| label: fig-cor-suppressed-nm
 #| fig-cap: "Correlations between Measures of Vulnerability across School Districts in New Mexico (Suppressed, k = 10)"
-#| fig-subcap:
-#|   - "Correlations (Suppressed, k = 10)"
-#|   - "Correlations Bias" 
 #| warning: false
 
 # Correlation values New Mexico
 
 # Plotting for k = 10
+k <- 10
+
 cor_pub <- nm_supp[[k]][, -(1:2)] %>%
   cor()
 cor_pub[upper.tri(cor_pub)] <- NA
@@ -419,7 +430,7 @@ bias <- cor_pub - cor_nm
 bias %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
 
 # Correlation matrix for suppressed data
-cor_pub %>%
+p1 <- cor_pub %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
   mutate(
@@ -428,14 +439,17 @@ cor_pub %>%
   ) %>%
   ggplot(aes(var1, var2, fill = correlation)) +
   geom_tile() + 
-  geom_text(aes(label = round(correlation, 2))) +
+  geom_text(aes(label = round(correlation, 2)), size = 4) +
   scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
   theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = NULL, y = NULL)
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL) + 
+  scale_x_discrete(labels = var) + 
+  scale_y_discrete(labels = rev(var)) + 
+  labs(fill = "Correlation")
 
 # Correlation matrix for suppressed data - original data
-bias %>%
+p2 <- bias %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
   mutate(
@@ -443,12 +457,18 @@ bias %>%
     var2 = factor(var2, levels = colnames(bias))
   ) %>%
   ggplot(aes(var1, var2, fill = correlation)) +
-  geom_tile() +
-  geom_text(aes(label = round(correlation, 2))) +
-  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = NULL, y = NULL)
+  geom_tile() + 
+  geom_text(aes(label = round(correlation, 2)), size = 4) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-0.5, 0.5)) +
+  theme_minimal() + 
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL) + 
+  scale_x_discrete(labels = var) + 
+  scale_y_discrete(labels = rev(var)) + 
+  labs(fill = "Correlation Bias")
+
+p1 + p2
+
 ```
 
 #### Pennsylvania
@@ -472,7 +492,7 @@ bias <- cor_pub - cor_pa
 bias %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
 
 # Correlation matrix for suppressed data
-cor_pub %>%
+p1 <- cor_pub %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
   mutate(
@@ -481,14 +501,17 @@ cor_pub %>%
   ) %>%
   ggplot(aes(var1, var2, fill = correlation)) +
   geom_tile() + 
-  geom_text(aes(label = round(correlation, 2))) +
+  geom_text(aes(label = round(correlation, 2)), size = 4) +
   scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
   theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = NULL, y = NULL)
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL) + 
+  scale_x_discrete(labels = var) + 
+  scale_y_discrete(labels = rev(var)) + 
+  labs(fill = "Correlation")
 
 # Correlation matrix for suppressed data - original data
-bias %>%
+p2 <- bias %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation") %>%
   mutate(
@@ -496,12 +519,17 @@ bias %>%
     var2 = factor(var2, levels = colnames(bias))
   ) %>%
   ggplot(aes(var1, var2, fill = correlation)) +
-  geom_tile() +
-  geom_text(aes(label = round(correlation, 2))) +
-  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = NULL, y = NULL)
+  geom_tile() + 
+  geom_text(aes(label = round(correlation, 2)), size = 4) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-0.5, 0.5)) +
+  theme_minimal() + 
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
+  labs(x = NULL, y = NULL) + 
+  scale_x_discrete(labels = var) + 
+  scale_y_discrete(labels = rev(var)) + 
+  labs(fill = "Correlation Bias")
+
+p1 + p2
 ```
 
 #### Privacy-Utility Curve
@@ -549,7 +577,8 @@ ggplot(cor_data, aes(x = K, y = Bias, color = State)) +
   scale_y_continuous(limits = c(0, 1.5),
                      breaks = 0:15 * 0.1) +
   labs(x = "K",
-       y = "Correlation Bias")
+       y = "Sum of the Absolute Correlation Bias") + 
+  theme(text = element_text(size = 15))
 
 ```
 
@@ -566,18 +595,18 @@ Our next utility metric is looking at the share of students without access to a 
 #| warning: false
 
 # School District Files
-schools_nm <- school_districts("New Mexico")
+schools_nm <- school_districts("New Mexico") %>% invisible()
 
 # Creating the maps
 set_urbn_defaults(style = "map")
 
-data_broadband <- data_nm %>%
+data_broadband <- nm_prop %>%
     dplyr::select(
       geographic_school_district,
       no_computer_internet
     )
 
-schools_nm <- rename(schools_nm, geographic_school_district = NAME)
+schools_nm <- rename(schools_nm, geographic_school_district = NAME) %>% invisible()
 
 temp <- schools_nm %>%
     dplyr::select(
@@ -592,7 +621,8 @@ ggplot() +
   geom_sf(temp,
           mapping = aes(fill = no_computer_internet),
           color = "#ffffff", size = 0.25) +
-  scale_fill_gradientn(labels = scales::percent, limits = c(0, 1))
+  scale_fill_gradientn(labels = scales::percent, limits = c(0, 1)) + 
+  labs(fill = "Computer/Broadband")
 
 ```
 
@@ -609,7 +639,7 @@ schools_pa <- school_districts("Pennsylvania")
 # Creating the maps
 set_urbn_defaults(style = "map")
 
-data_parent <- data_pa %>%
+pa_proprent <- pa_prop %>%
     dplyr::select(
       geographic_school_district,
       single_parent
@@ -624,13 +654,14 @@ temp <- schools_pa %>%
       INTPTLON,
       geometry
     ) %>%
-  right_join(data_parent, by = "geographic_school_district")
+  right_join(pa_proprent, by = "geographic_school_district")
 
 ggplot() +
   geom_sf(temp,
           mapping = aes(fill = single_parent),
           color = "#ffffff", size = 0.25) +
-  scale_fill_gradientn(labels = scales::percent, limits = c(0, 1))
+  scale_fill_gradientn(labels = scales::percent, limits = c(0, 1)) + 
+  labs(fill = "Single Parent")
 ```
 
 ### Synthetic Data
@@ -639,108 +670,64 @@ ggplot() +
 
 ```{r}
 #| label: fig-map-nm-synth
-#| fig-cap: "Lack of Computer or Broadband Access in New Mexico"
-#| fig-subcap:
-#|   - "Broadband Count (Synthetic)"
-#|   - "Broadband Count Bias" 
+#| fig-cap: "Lack of Computer or Broadband Access in New Mexico (Synthetic Data)"
 #| message: false
 #| warning: false
 
-data_broadband <- nm_synth %>%
-    dplyr::select(
-      geographic_school_district,
-      no_computer_internet
-    )
+source("rcode/broadband_fun.R")
 
-temp <- schools_nm %>%
-    dplyr::select(
-      geographic_school_district,
-      INTPTLAT,
-      INTPTLON,
-      geometry
-    ) %>%
-  right_join(data_broadband, by = "geographic_school_district")
+bias <- broadband_fun(nm_synth[[1]], schools_nm, nm_prop)
+bias2 <- broadband_fun(nm_synth[[2]], schools_nm, nm_prop)
+bias3 <- broadband_fun(nm_synth[[3]], schools_nm, nm_prop)
 
-bias <- data_broadband$no_computer_internet - data_nm$no_computer_internet
+bias <- bind_rows(bias, bias2, bias3)
 
-bias %>% range()
+n <- nrow(nm_prop)
+alpha <- c(0.1, 0.25, 0.5)
+alpha <- rep(alpha, each = n)
 
-bias <- bind_cols(temp$geographic_school_district, bias)
-colnames(bias) <- c("geographic_school_district", "no_computer_internet")
-
-bias <- schools_nm %>%
-    dplyr::select(
-      geographic_school_district,
-      INTPTLAT,
-      INTPTLON,
-      geometry
-    ) %>%
-  right_join(bias, by = "geographic_school_district")
-
-ggplot() +
-  geom_sf(temp,
-          mapping = aes(fill = no_computer_internet),
-          color = "#ffffff", size = 0.25) +
-  scale_fill_gradientn(labels = scales::percent, limits = c(0, 1))
+bias <- bind_cols(bias, alpha)
+colnames(bias) <- c("geographic_school_district", "INTPTLAT", "INTPTLON", "no_computer_internet", "Alpha", "geometry")
 
 ggplot() +
   geom_sf(bias,
           mapping = aes(fill = no_computer_internet),
           color = "#ffffff", size = 0.25) +
-  scale_fill_gradientn(colors = palette_urbn_diverging, labels = scales::percent, limits = c(-0.2, 0.2))
+  scale_fill_gradientn(colors = palette_urbn_diverging, labels = scales::percent, limits = c(-0.25, 0.25)) + 
+  labs(fill = "Computer/Broadband Bias") +
+    facet_wrap(. ~ Alpha)
+  
 ```
 
 #### Pennsylvania
 
 ```{r}
-#| label: fig-map-pa-dp
-#| fig-cap: "Single Parent in Pennsylvania"
-#| fig-subcap:
-#|   - "Broadband Count (DP)"
-#|   - "Broadband Count Bias" 
+#| label: fig-map-pa-synth
+#| fig-cap: "Single Parent in Pennsylvania (Synthetic Data)"
 #| message: false
 #| warning: false
 
-data_single <- pa_dp %>%
-    dplyr::select(
-      geographic_school_district,
-      single_parent
-    )
+source("rcode/parent_fun.R")
 
-temp <- schools_pa %>%
-    dplyr::select(
-      geographic_school_district,
-      INTPTLAT,
-      INTPTLON,
-      geometry
-    ) %>%
-  right_join(data_single, by = "geographic_school_district")
+bias <- parent_fun(pa_synth[[1]], schools_pa, pa_prop)
+bias2 <- parent_fun(pa_synth[[2]], schools_pa, pa_prop)
+bias3 <- parent_fun(pa_synth[[3]], schools_pa, pa_prop)
 
-bias <- data_single$single_parent - data_pa$single_parent
+bias <- bind_rows(bias, bias2, bias3)
 
-bias %>% range()
+n <- nrow(pa_prop)
+alpha <- c(0.1, 0.25, 0.5)
+alpha <- rep(alpha, each = n)
 
-bias <- bind_cols(temp$geographic_school_district, bias)
-colnames(bias) <- c("geographic_school_district", "single_parent")
-
-bias <- schools_pa %>%
-    dplyr::select(
-      geographic_school_district,
-      INTPTLAT,
-      INTPTLON,
-      geometry
-    ) %>%
-  right_join(bias, by = "geographic_school_district")
-
-ggplot() +
-  geom_sf(temp,
-          mapping = aes(fill = single_parent),
-          color = "#ffffff", size = 0.25) +
-  scale_fill_gradientn(labels = scales::percent, limits = c(0, 1))
+bias <- bind_cols(bias, alpha)
+colnames(bias) <- c("geographic_school_district", "INTPTLAT", "INTPTLON", "single_parent", "Alpha", "geometry")
 
 ggplot() +
   geom_sf(bias,
           mapping = aes(fill = single_parent),
           color = "#ffffff", size = 0.25) +
-  scale_fill_gradientn(colors = palette_urbn_diverging, labels = scales::percent, limits = c(-0.2, 0.2))
+  scale_fill_gradientn(colors = palette_urbn_diverging, labels = scales::percent, limits = c(-0.25, 0.25)) + 
+  labs(fill = "Single Parent Bias") +
+    facet_wrap(. ~ Alpha, dir = "v")
+
 ```
