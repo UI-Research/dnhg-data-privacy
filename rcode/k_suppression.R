@@ -10,7 +10,7 @@
 
 k_suppresion <- function(data, k) {
   supp_data <-data %>%
-    replace(data < k, 0) %>%
+    replace(data < k & data != 0, NA) %>%
     mutate(
       poverty = poverty / children_5_17,
       linguistically_isolated = linguistically_isolated / children_5_17,

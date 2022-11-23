@@ -38,10 +38,10 @@ library(tidyverse)  # for data wrangling and visualization
 library(knitr)      # for tables
 library(readxl)     # for importing excel (data)
 library(smoothmest) # for laplace distribution
-library(urbnthemes) # for ggplot2 theme
 library(tigris)     # for census shape files
-library(doParallel) # for parallel computing
 library(patchwork)  # for combining ggplots
+library(urbnthemes) # for ggplot2 theme
+library(doParallel) # for parallel computing
 ```
 
 ## Data
@@ -53,7 +53,7 @@ The researchers used 2014 through 2018 data from the American Community Survey  
 
 The data set is the 2014 through 2018 five-year estimate from the National Historical Geographic Information System. The National Historical Geographic Information System data has the seven variables of interest as proportions with margins of error. For simplicity, we assume the proportions are the true values and create another version of the data into tabular values based on those proportions. For this guide, we highlight two states, New Mexico and Pennsylvania. We pick these states because they vary greatly in population density and the proportion of the seven variables, which demonstrates how population density affect statistical data privacy results.
 
-**Note that we apply these data to multiple analyses that are inspired from the original Urban report, but are not the original analyses.**
+**Disclaimer:** Please note that the analyses in this chapter are inspired by real data and public policy analytics but are not representative of them.
 
 ```{r}
 #| label: data
@@ -126,9 +126,10 @@ In this section, we apply the current three most popular data privacy and confid
 #### Suppression
 Suppression, or not reporting certain values from the data, is one of the earliest and easiest statistical disclosure control methods. For example, if two African American women live in Santa Fe County in New Mexico, then we would want to suppress or not report those people because they could be easily identified. The rules for determining the threshold for suppression vary based on data privacy laws, data type, and many other factors.
 
-A common version of suppression is designed to satisfy k-anonymity (Sweeney, 2002), which requires that any released data set contain at least k observations for each combination of possibly identifying variables (e.g., age, sex, or race). We can alter or suppress either rows or columns of the data to achieve a certain level of k-anonymity.
+A common version of suppression is to suppress the counts of values if they do not meet a threshold. For example, if our threshold is 3 and there
 
 For our illustrative example, we will suppress the data up to k = 10 for each of the seven factors. Typical applications use lower values of k, such as k = 3 or 5, but we pick a higher value because the data we are treating as the confidential data has already been altered for privacy.
+
 As mentioned earlier, an advantage of suppression is the method is quick and simple to implement. Also, values above k are unaltered, improving utility for those values. A disadvantage is that no information is provided for the values at or below k, which might be essential for some analyses.
 
 ```{r}
@@ -161,7 +162,6 @@ We will generate fully synthetic data via a nonparametric model (Reiter 2005; Dr
 
 An advantage for synthetic data generation in our illustrative example is that we can report values for all school districts instead of removing some in the case of suppression. A drawback to this approach is that values are model dependent and could lead to improperly replicating the data for particular analyses. In our case, we first synthesize the total children count before we synthesize each variable individually as proportions. 
 
-
 ```{r}
 #| label: synthetic
 #| code-summary: "synthetic"
@@ -178,7 +178,7 @@ source("rcode/synth_fun.R")
 set.seed(20230128)
 
 # Code for parallel computing
-cl <- makeCluster(detectCores() - 4)
+cl <- makeCluster(detectCores() - 6)
 clusterCall(cl, function() lapply(c("doParallel", "tidyverse"), require, character.only = TRUE)) %>% invisible()
 registerDoParallel(cl)
 set_urbn_defaults(style = "print")
@@ -189,7 +189,7 @@ clusterCall(cl, function() {source("rcode/synth.R")}) %>% invisible()
 clusterCall(cl, function() {source("rcode/synth_fun.R")}) %>% invisible()
 
 # Number of repetitions
-n <- 10
+n <- 20
 
 # Dirichlet Prior tuning parameter
 alpha <- c(0.1, 0.25, 0.5)
@@ -212,7 +212,6 @@ For our example, we will add Laplace noise to each count and normalize to the to
 Similar to the synthetic data method, we have a postprocessing step to ensure that the total count is greater than or equal to max count of any factor. We also assume zeros.
 
 DP methods that create synthetic data have similar advantages and disadvantages as synthetic data generation methods. The main difference is that DP methods can account for privacy loss. 
-
 
 ```{r}
 #| label: dp-laplace
@@ -409,7 +408,7 @@ cor_pa %>%
 ### Suppressed Data
 
 #### New Mexico
-For the New Mexico suppressed data, we see that "lack of computer or broadband access" is still the most correlated (0.61) with "single parent" is next (0.44). The overall sum absolute bias on the correlation matrix is 1.33.
+For the New Mexico suppressed data, we see that "lack of computer or broadband access" is still the most correlated (0.61) with "single parent" is next (0.44).
 
 ```{r}
 #| label: fig-cor-suppressed-nm
@@ -422,12 +421,12 @@ For the New Mexico suppressed data, we see that "lack of computer or broadband a
 k <- 10
 
 cor_pub <- nm_supp[[k]][, -(1:2)] %>%
-  cor()
+  cor(use = "complete.obs")
 cor_pub[upper.tri(cor_pub)] <- NA
 
 bias <- cor_pub - cor_nm
 
-bias %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
+bias %>% abs() %>% mean(na.rm = TRUE) %>% round(digits = 2)
 
 # Correlation matrix for suppressed data
 p1 <- cor_pub %>%
@@ -439,10 +438,10 @@ p1 <- cor_pub %>%
   ) %>%
   ggplot(aes(var1, var2, fill = correlation)) +
   geom_tile() + 
-  geom_text(aes(label = round(correlation, 2)), size = 4) +
+  geom_text(aes(label = round(correlation, 2)), size = 5) +
   scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
   theme_minimal() + 
-  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
+  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
   labs(x = NULL, y = NULL) + 
   scale_x_discrete(labels = var) + 
   scale_y_discrete(labels = rev(var)) + 
@@ -458,10 +457,10 @@ p2 <- bias %>%
   ) %>%
   ggplot(aes(var1, var2, fill = correlation)) +
   geom_tile() + 
-  geom_text(aes(label = round(correlation, 2)), size = 4) +
-  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-0.5, 0.5)) +
+  geom_text(aes(label = round(correlation, 2)), size = 5) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
   theme_minimal() + 
-  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
+  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
   labs(x = NULL, y = NULL) + 
   scale_x_discrete(labels = var) + 
   scale_y_discrete(labels = rev(var)) + 
@@ -472,7 +471,7 @@ p1 + p2
 ```
 
 #### Pennsylvania
-For the Pennsylvania suppressed data, we see that "single parent" is still the most correlated (0.71) with "children with disability" and "lack of computer or broadband access" next (0.52 and 0.48, respectively). These values are almost exactly the same as the original data, which is expected because Pennsylvania has a fairly dense population. The overall sum absolute bias on the correlation matrix is 0.21.
+For the Pennsylvania suppressed data, we see that "single parent" is still the most correlated (0.71) with "children with disability" and "lack of computer or broadband access" next (0.52 and 0.48, respectively). These values are almost exactly the same as the original data, which is expected because Pennsylvania has a fairly dense population.
 
 ```{r}
 #| label: fig-cor-suppressed-pa
@@ -484,12 +483,12 @@ For the Pennsylvania suppressed data, we see that "single parent" is still the m
 
 # Correlation values Pennsylvania
 cor_pub <- pa_supp[[k]][, -(1:2)] %>%
-  cor()
+  cor(use = "complete.obs")
 cor_pub[upper.tri(cor_pub)] <- NA
 
 bias <- cor_pub - cor_pa
 
-bias %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
+bias %>% abs() %>% mean(na.rm = TRUE) %>% round(digits = 2)
 
 # Correlation matrix for suppressed data
 p1 <- cor_pub %>%
@@ -501,10 +500,10 @@ p1 <- cor_pub %>%
   ) %>%
   ggplot(aes(var1, var2, fill = correlation)) +
   geom_tile() + 
-  geom_text(aes(label = round(correlation, 2)), size = 4) +
+  geom_text(aes(label = round(correlation, 2)), size = 5) +
   scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
   theme_minimal() + 
-  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
+  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
   labs(x = NULL, y = NULL) + 
   scale_x_discrete(labels = var) + 
   scale_y_discrete(labels = rev(var)) + 
@@ -520,10 +519,10 @@ p2 <- bias %>%
   ) %>%
   ggplot(aes(var1, var2, fill = correlation)) +
   geom_tile() + 
-  geom_text(aes(label = round(correlation, 2)), size = 4) +
-  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-0.5, 0.5)) +
+  geom_text(aes(label = round(correlation, 2)), size = 5) +
+  scale_fill_gradientn(colours = palette_urbn_diverging, na.value = "white", limits = c(-1, 1)) +
   theme_minimal() + 
-  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
+  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 40, vjust = 1, hjust = 1)) +
   labs(x = NULL, y = NULL) + 
   scale_x_discrete(labels = var) + 
   scale_y_discrete(labels = rev(var)) + 
@@ -542,22 +541,23 @@ p1 + p2
 nm_bias <- vector()
 for(i in 1:k) {
   cor_pub <- nm_supp[[i]][, -(1:2)] %>%
-  cor()
+  cor(use = "complete.obs")
   
   cor_pub[upper.tri(cor_pub)] <- NA
 
-  nm_bias[i] <- (cor_pub - cor_nm) %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
+  nm_bias[i] <- (cor_pub - cor_nm) %>% abs() %>% mean(na.rm = TRUE) %>% round(digits = 3)
 }
+
 
 # Correlation values Pennsylvania
 pa_bias <- vector()
 for(i in 1:k) {
   cor_pub <- pa_supp[[i]][, -(1:2)] %>%
-  cor()
+  cor(use = "complete.obs")
   
   cor_pub[upper.tri(cor_pub)] <- NA
 
-  pa_bias[i] <- (cor_pub - cor_pa) %>% abs() %>% sum(na.rm = TRUE) %>% round(digits = 2)
+  pa_bias[i] <- (cor_pub - cor_pa) %>% abs() %>% mean(na.rm = TRUE) %>% round(digits = 3)
 }
 
 # Line Plot
@@ -574,10 +574,9 @@ ggplot(cor_data, aes(x = K, y = Bias, color = State)) +
   geom_line() +
   scale_x_continuous(limits = c(1, k),
                      breaks = 1:k) +
-  scale_y_continuous(limits = c(0, 1.5),
-                     breaks = 0:15 * 0.1) +
-  labs(x = "K",
-       y = "Sum of the Absolute Correlation Bias") + 
+  scale_y_continuous(limits = c(0, 0.08)) +
+  labs(x = "Suppression Threshold",
+       y = "Mean of the Absolute Correlation Bias") + 
   theme(text = element_text(size = 15))
 
 ```
