@@ -575,6 +575,8 @@ ggplot(cor_data, aes(x = K, y = Bias, color = State)) +
   scale_x_continuous(limits = c(1, k),
                      breaks = 1:k) +
   scale_y_continuous(limits = c(0, 0.08)) +
+  scale_y_reverse() +
+  scale_x_reverse() +
   labs(x = "Suppression Threshold",
        y = "Mean of the Absolute Correlation Bias") + 
   theme(text = element_text(size = 15))
