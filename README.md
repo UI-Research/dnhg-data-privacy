@@ -20,7 +20,8 @@ The data are from a Urban research report called, "[Mapping Student Needs during
 - [tigris](https://cran.r-project.org/web/packages/tigris/index.html) is a R package that provides state and county shapefiles that are compatible to map with ggplot2.
 - [urbnthemes](https://github.com/UrbanInstitute/urbnthemes) is a set of tools for creating Urban Institute-themed plots and maps in R. The package extends ggplot2 with print and map themes as well as tools that make plotting easier at the Urban Institute.
 - [patchwork](https://patchwork.data-imaginist.com/) is a R package that simplifies combining separate ggplots into the same graphic.
-- [doParallel](https://cran.r-project.org/web/packages/doParallel/doParallel.pdf) is a R package that provides parallel backend
+- [doParallel](https://cran.r-project.org/web/packages/doParallel/doParallel.pdf) is a R package that provides parallel backend.
+- [svglite](https://www.tidyverse.org/blog/2021/02/svglite-2-0-0/) is a R package that creates SVG files from R graphics.
 
 ### rcode Directory
 
