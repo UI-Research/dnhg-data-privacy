@@ -47,16 +47,16 @@ library(svglite)    # for outputing SVG files
 
 ## Data
 
-Our illustrative example comes from the Urban Institute research report, "[Mapping Student Needs during COVID-19](https://www.urban.org/research/publication/mapping-student-needs-during-covid-19)". The data in the report are drawn from the American Community Survey (ACS), which is collected and published the US Census Bureau (the cleaned data can be accessed for free at the [Urban Institute Data Catalog](https://datacatalog.urban.org/dataset/household-conditions-geographic-school-district).The purpose of the research is to “…highlight different types of challenges to remote learning and point to district and educator strategies that mitigate harm to students as districts navigate long-term school closures.” In addition to poverty, the researchers examined six other factors of remote learning challenges: linguistic isolation, child disability status, parents in vulnerable economic sectors, single parent, crowded conditions, and lack of computer or broadband access. See the report for how they define these factors.
+Our illustrative example comes from the Urban Institute research report, "[Mapping Student Needs during COVID-19](https://www.urban.org/research/publication/mapping-student-needs-during-covid-19)". The data in the report are drawn from the American Community Survey (ACS), which is collected and published the US Census Bureau (the cleaned data can be accessed for free at the [Urban Institute Data Catalog](https://datacatalog.urban.org/dataset/household-conditions-geographic-school-district). The purpose of the research is to “highlight different types of challenges to remote learning and point to district and educator strategies that mitigate harm to students as districts navigate long-term school closures.” The researchers examined seven factors that contribute to remote learning challenges: poverty, linguistic isolation, child disability status, parents in vulnerable economic sectors, single parents, crowded conditions, and lack of computer or broadband access. See the report for how they define these factors.
 
 ### Confidential Data
-The researchers used 2014 through 2018 data from the American Community Survey  to conduct their analysis. The researchers used two public use files from the American Community Survey, but we focus on the 2014 through 2018 five-year estimate from the National Historical Geographic Information System. This data set has seven variables of interest, measured as proportions and each published with margins of error estimated by the Census Bureau. The published American Community Survey data are public data that have undergone SDP protections prior to being released.
-We do not have access to the original survey data, but for purposes of this case study, we are going to treat the public use files as “confidential.” We define these confidential data as the cleaned version of the data, meaning the data have been edited for inaccuracies or inconsistencies. For simplicity, we also assume the percentages are the true values of the data, and we created another version of the data into tabular values based on those percentages. We then readjust the values to ensure there are whole counts. As an example, if a school district has a 10 percent poverty rate and 48 total students, we then list 5 students in poverty for the tabular data. 
+The researchers used 2014 through 2018 data from the ACS to conduct their analysis.  The researchers used two public-use files from the ACS, but we focus on the 2014 through 2018 five-year estimate from the National Historical Geographic Information System. This data set has seven variables of interest, measured as proportions and each published with margins of error estimated by the Census Bureau. The published ACS data are public data that have undergone SDP protections prior to being released.
 
-For this guide, we highlight two states, New Mexico and Pennsylvania. We pick these states because they vary greatly in population density and the proportion of the seven variables. In 2022, 2.1 million people lived in New Mexico and 13.0 million people lived in Pennsylvania, making Pennsylvania about six times as populous as New Mexico (and almost 17 times more densely populated). As you will see, this comparison will succinctly demonstrate how population density affects statistical data privacy results. 
+We do not have access to the original survey data, but for purposes of this case study, we are going to treat the public use files as “confidential.” We define these confidential data as the cleaned version of the data, meaning the data have been edited for inaccuracies or inconsistencies. For simplicity, we also assume the percentages are the true values of the data, and we created a tabular version of the data based on those percentages. We then readjust the values to ensure there are whole counts. As an example, if a school district has a 10 percent poverty rate and 48 total students, we then list 5 students in poverty for the tabular data. 
 
-We make the caveat that the results shown here are intended only to help understand the potential varying effects on different groups in the data when applying different SDP techniques. We do not intend for readers to draw substantial conclusions about the merits of particular methods compared with one another or the effect of adding noise through SDP methods relative to the other forms of noise in the estimates (e.g., measurement error or sampling error).
+For this guide, we highlight two states, New Mexico and Pennsylvania. We pick these states because they vary greatly in population density and in their proportions of the seven variables. In 2022, 2.1 million people lived in New Mexico and 13.0 million people lived in Pennsylvania, making Pennsylvania about six times as populous as New Mexico (and almost 17 times more densely populated). As you will see, this comparison will succinctly demonstrate how population density affects statistical data privacy results. 
 
+We make the caveat that the results shown here are intended only to help demonstrate the potential varying effects on different groups in the data when applying different SDP techniques. We do not intend for readers to draw substantial conclusions about the merits of some methods over others or the effect of adding noise through SDP methods relative to the other forms of noise in the estimates (e.g., measurement error or sampling error).
 
 **Disclaimer:** Please note that the analyses in this chapter are inspired by real data and public policy analytics but are not representative of them.
 
@@ -122,18 +122,21 @@ pa_counts <- pa_prop %>%
 ```
 
 ### Statistical Disclosure Control Methods
-In this section, we apply the current three most popular data privacy and confidentiality methods:
+In this section, we use the three of the most well-known data privacy and confidentiality methods:
 
   1. **Suppression** - removing values
   2. **Synthetic Data** - replicating the confidential data based on a statistically representative model to generate pseudo or fake data records
   3. **Noise infusion** - adding noise using a differentially private method
+  
+Below, we define each of these methods, explain how we apply them to the illustrative example described in Chapter 3, and discuss their advantages and disadvantages.
 
 #### Suppression
-Suppression, or not reporting certain values from the data, is one of the earliest and simplest statistical disclosure control methods. For example, if two Black women live in Santa Fe County in New Mexico, then we would want to suppress or not report those people because they could be easily identified. The rules for determining the threshold for suppression vary based on data privacy laws, data type, and many other factors (Federal Committee on Statistical Methodology, 2005).
+Suppression, or not reporting certain values from the data, is one of the earliest and simplest statistical disclosure control methods. For example, if only two Black women live in Santa Fe County in New Mexico, then we would want to suppress data so they cannot be easily identified. The rules for determining the threshold for suppression vary based on data privacy laws, data type, and many other factors (Federal Committee on Statistical Methodology 2005).
 
-For our illustrative example, we suppress the marginal counts of the factors within each school districted if those values are below a threshold (e.g., if there are four students in a school district that are in poverty, then the value will be suppressed or removed if the threshold is five). We picked a threshold of 10 for this illustration. Some applications use lower values, such as 3 or 5, but we pick a higher value because the data we are treating as the confidential data has already been altered for privacy.
+For our illustrative example, we suppress the marginal counts of the factors for each school district if those values are below a threshold (e.g., if the threshold for poverty is five and there are four students in a school district that are living in poverty, then the value will be suppressed). We picked a threshold of 10 for our illustrative example in Chapter 3 because the data we are treating as the confidential data has already been altered for privacy. Some applications use lower values, such as three or five.
 
-As mentioned earlier, an advantage of suppression is that the method is quick and simple to implement. Also, values above the selected threshold are unaltered, which may appeal to some users. A disadvantage is that no information is provided for the values at or below that selected threshold, which might be essential for some analyses.
+As mentioned earlier, an advantage of suppression is that it is a quick and simple method to implement. Also, values above the selected threshold remain unaltered, which may appeal to some users. A disadvantage is that no information is provided for the values at or below that selected threshold, which might be essential for some analyses.
+
 
 
 ```{r}
@@ -155,12 +158,11 @@ pa_supp <- lapply(1:k, function(x) k_suppresion(pa_counts, x))
 ```
 
 #### Synthetic Data
-Synthetic data consists of pseudo or “fake” records that are statistically representative of the confidential data. Records are considered synthesized when they are replaced with draws from a model fitted to the confidential data. Statisticians originally developed synthetic data as a conceptual extension of multiple imputation (Rubin 1993). Multiple imputation is used to address missing data in clinical trial scenarios and nonresponses in surveys by developing a model based on the remaining participants’ information to create new observations or values for the missing data. Synthetic data extends this concept to generating entirely new records for individuals to be released in place of the original records. The idea of synthetic data may be attractive to some because the synthetic data contain only “fake” records.
+Synthetic data consist of pseudo or “fake” records that are statistically representative of the confidential data. Records are considered synthesized when they are replaced with draws from a model fitted to the confidential data. Statisticians originally developed synthetic data as a conceptual extension of multiple imputation (Rubin 1993). Multiple imputation is used to address missing data in clinical trial scenarios and nonresponses in surveys by developing a model based on the remaining participants’ information to create new observations or values for the missing data. Synthetic data extends this concept by generating entirely new records for individuals that can be released in place of the original records. The idea of synthetic data may be attractive to some because the synthetic data contain only “fake” records.
 
-We generate fully synthetic data via a multinomial probability distribution with a Dirichlet prior to making our draws for each variable factor based on the total children count in the school district (Reiter et al. 2014). We use a Dirichlet prior distribution so we can vary the distributions parameters to adjust the “smoothness” of our synthetic data. The smoothing parameter values are 0.1, 0.25, and 0.5, where a large smoothing parameter means the draws will be made from more flat probabilities than the observed proportions. We expect this to impact smaller demographic groups than larger groups, as seen in Chapter 3. We have a postprocessing step (i.e., ensuring the results of the statistic or information are consistent with realistic constraints) to ensure that the total count is greater than or equal to max count of any factor. 
+For our illustrative example, we generate fully synthetic data via a multinomial probability distribution with a Dirichlet prior to making our draws for each variable factor based on the total child count in the school district (Reiter, Wang, and Zhang 2014). We use a Dirichlet prior distribution so we can vary the distribution parameters to adjust the “smoothness” of our synthetic data. The smoothing parameter values are 0.1, 0.25, and 0.5. A larger smoothing parameter means the draws will be made from more flat probabilities than the observed proportions. We expect adjusting the smoothing parameter to impact smaller demographic groups more than larger groups, as seen in Chapter 3. We have a post-processing step, which is a step that ensures the data are consistent with realistic constraints. For our example, the post-processing step ensures that the total count is greater than or equal to the max count of any factor. 
 
-An advantage for synthetic data generation in our illustrative example is that we can report values for all school districts instead of removing some in the case of suppression. A drawback to this approach is that values are model dependent and could lead to improperly replicating the data for particular analyses. In our case, we first synthesize the total number of children count before we synthesize each variable individually as proportions. 
-
+An advantage for synthetic data generation in our illustrative example is that we can report values for all school districts instead of removing some in the case of suppression. A drawback to this approach is that values are model dependent and could lead to improperly replicating the data for particular analyses. In our case, we first synthesize the total child count before we synthesize each variable individually as proportions. 
 
 ```{r}
 #| label: synthetic
@@ -203,13 +205,14 @@ stopCluster(cl)
 
 ```
 
-#### Noise Infusion satisfying Differential Privacy
-Another approach to protecting confidential data is adding random noise (i.e., adding or subtracting random values drawn from a probability distribution). One way to add noise or alter values in data is applying a method that satisfies differential privacy (DP) (Dwork et al. 2006). At a high level, DP is a strict mathematical definition that a method must satisfy (or meet the mathematical conditions) to be considered differentially private, not a statement or description of the data itself. Using methods that satisfy DP helps to quantify the relative privacy protections offered by adding different amounts of noise. 
+#### Noise Infusion Satisfying Differential Privacy
+nother approach to protecting confidential data is adding random noise (i.e., adding or subtracting random values drawn from a probability distribution). One way to add noise or alter values in data is to apply a method that satisfies differential privacy (DP) (Dwork et al. 2006). At a high level, DP is a strict mathematical definition that a method must satisfy (or meet the mathematical conditions of) to be considered differentially private. DP is not a statement or description of the data itself. Using methods that satisfy DP helps to quantify the relative privacy protections offered by adding different amounts of noise. 
 
-A method that satisfies DP is the Laplace mechanism, which adds noise by drawing values from a Laplace distribution. The Laplace distribution is centered at zero and the distribution variability (i.e., wide or narrow the distribution is) is the ratio of the privacy loss budget, $\epsilon$, over the sensitivity of the target statistics. Having the distribution centered at zero means there is a higher probability of adding very little or no noise to the confidential data statistics. For the noise variability, if $\epsilon$ is large or the sensitivity of the statistic is low, then there is a higher probability of adding very little noise to confidential data statistic. If $\epsilon$ is small or the sensitivity of the statistics is high, then there is a higher probability of adding a lot of noise to the released statistic.
+A method that satisfies DP is the Laplace mechanism, which adds noise by drawing values from a Laplace distribution. The Laplace distribution is centered at zero and the distribution variability (i.e., how wide or narrow the distribution is) is the ratio of the privacy loss budget, $\epsilon$, over the sensitivity of the target statistics. Having the distribution centered at zero means there is a higher probability of adding very little or no noise to the confidential data statistics. For the noise variability, if $\epsilon$ large or the sensitivity of the statistic is low, then there is a higher probability of adding very little noise to a confidential data statistic. If $\epsilon$ is small or the sensitivity of the statistics is high, then there is a higher probability of adding a lot of noise to the released statistic.
 
-For our example, we will add Laplace noise to each count and normalize to the totals. In other words, we assume the total counts are invariant (i.e., no change to the statistics). We will test for $\epsilon$ = (0.01, 0.1, 1), which are values used in some real-world applications for tabular data sets. For example, the 2020 Decennial Census is a massive tabular data set of every person in the United States at various geographic levels and places people live (e.g., residential and dorms). They allocated roughly between 0.06 to 1.54 on various tabular statistics.
-Similar to the synthetic data method, we have a postprocessing step to ensure that the total count is greater than or equal to max count of any factor. For this particular example, adding noise using the Laplace mechanism has similar advantages and disadvantages as the synthetic data generation method. The main difference is that DP methods formalize the privacy loss. 
+For our example, we will add Laplace noise to each count and normalize to the totals. In other words, we assume the total counts are invariant (i.e., no change to the statistics). We will test for $\epsilon$ = (0.01, 0.1, 1), which are values used in some real-world applications for tabular data sets. For example, the 2020 Decennial Census is a massive tabular data set of every person in the United States at various geographic levels and types of places people live (e.g., housing unit and student dormitory). They allocated roughly between 0.06 and 1.54 on various tabular statistics.
+
+Similar to the synthetic data method, we have a post-processing step to ensure that the total count is greater than or equal to the max count of any factor. For this particular example, adding noise using the Laplace mechanism has similar advantages and disadvantages as the synthetic data generation method. The main difference is that DP methods formalize the privacy loss. 
 
 ```{r}
 #| label: dp-laplace
@@ -275,9 +278,9 @@ p1 <- ggplot(nm_points_data, aes(Original, Poverty)) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(
     title = "New Mexico",
-    x = "Confidential Data Values",
-    y = "Differentially Private Values",
-    color = "Privacy Loss Budget"
+    x = "Confidential data values",
+    y = "Differentially private values",
+    fill = "Privacy loss budget"
   )
 
 # Creating the scatter plot for Pennsylvania
@@ -309,18 +312,18 @@ p2 <- ggplot(pa_points_data, aes(Original, Poverty)) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(
     title = "Pennsylvania",
-    x = "Confidential Data Values",
-    y = "Differentially Private Values",
-    color = "Privacy Loss Budget"
+    x = "Confidential data values",
+    y = "Differentially private values",
+    fill = "Privacy loss budget"
   )
 
 p1 + p2
 
-ggsave("figures/3-1.svg", width = 6.5, height = 4, units = "in")
+ggsave("figures/03.svg", width = 6.5, height = 4, units = "in")
 
 # For generating the data to create these plots
-write_csv(nm_points_data, "data/privacy_protected_data/3-1_nm-scatter.csv")
-write_csv(pa_points_data, "data/privacy_protected_data/3-1_pa-scatter.csv")
+write_csv(nm_points_data, "data/privacy_protected_data/03a_nm-scatter.csv")
+write_csv(pa_points_data, "data/privacy_protected_data/03b_pa-scatter.csv")
 
 ```
 
@@ -342,7 +345,7 @@ cor_nm <- nm_prop[, -c(1:2)] %>%
 cor_nm[upper.tri(cor_nm)] <- NA
 
 # Correlation variable names
-var <- c("Computer/Broadband", "Crowded Conditions", "Single Parent", "Vulnerable Economic Sectors", "Child Disability Status", "Linguistic Isolation", "Poverty")
+var <- c("Computer/broadband", "Crowded conditions", "Single parent", "Vulnerable economic sectors", "Child disability status", "Linguistic isolation", "Poverty")
 
 # Correlation matrix
 cor_nm %>%
@@ -363,14 +366,14 @@ cor_nm %>%
   scale_y_discrete(labels = rev(var)) + 
   labs(fill = "Correlation")
 
-ggsave("figures/3-2.svg", width = 7, height = 5, units = "in")
+ggsave("figures/04.svg", width = 7, height = 5, units = "in")
 
 # For generating the data to create the plots
 temp_dat <- cor_nm %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation")
 
-write_csv(temp_dat, "data/privacy_protected_data/3-2_nm-heat.csv")
+write_csv(temp_dat, "data/privacy_protected_data/04_nm-heat.csv")
 
 ```
 
@@ -405,14 +408,14 @@ cor_pa %>%
   scale_y_discrete(labels = rev(var)) + 
   labs(fill = "Correlation")
 
-ggsave("figures/3-4.svg", width = 7, height = 5, units = "in")
+ggsave("figures/06.svg", width = 7, height = 5, units = "in")
 
 # For generating the data to create the plots
 temp_dat <- cor_pa %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation")
 
-write_csv(temp_dat, "data/privacy_protected_data/3-4_pa-heat.csv")
+write_csv(temp_dat, "data/privacy_protected_data/06_pa-heat.csv")
 ```
 
 ### Suppressed Data
@@ -474,24 +477,28 @@ p2 <- bias %>%
   labs(x = NULL, y = NULL) + 
   scale_x_discrete(labels = var) + 
   scale_y_discrete(labels = rev(var)) + 
-  labs(fill = "Correlation Bias")
+  labs(fill = "Correlation bias")
 
-p1 + p2
+p1
 
-ggsave("figures/3-3.svg", width = 14.5, height = 5, units = "in")
+ggsave("figures/05a.svg", width = 7, height = 5, units = "in")
+
+p2
+
+ggsave("figures/05b.svg", width = 7.45, height = 5, units = "in")
 
 # For generating the data to create the plots
 temp_dat <- cor_pub %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation")
 
-write_csv(temp_dat, "data/privacy_protected_data/3-3_nm_heat_suppress.csv")
+write_csv(temp_dat, "data/privacy_protected_data/05a_nm_heat_suppress.csv")
 
 temp_dat <- bias %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation")
 
-write_csv(temp_dat, "data/privacy_protected_data/3-3_nm-heat-suppress-bias.csv")
+write_csv(temp_dat, "data/privacy_protected_data/05b_nm-heat-suppress-bias.csv")
 
 ```
 
@@ -550,24 +557,28 @@ p2 <- bias %>%
   labs(x = NULL, y = NULL) + 
   scale_x_discrete(labels = var) + 
   scale_y_discrete(labels = rev(var)) + 
-  labs(fill = "Correlation Bias")
+  labs(fill = "Correlation bias")
 
-p1 + p2
+p1
 
-ggsave("figures/3-5.svg", width = 15, height = 5, units = "in")
+ggsave("figures/07a.svg", width = 7, height = 5, units = "in")
+
+p2
+
+ggsave("figures/07b.svg", width = 7.45, height = 5, units = "in")
 
 # For generating the data to create the plots
 temp_dat <- cor_pub %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation")
 
-write_csv(temp_dat, "data/privacy_protected_data/3-5_pa_heat_suppress.csv")
+write_csv(temp_dat, "data/privacy_protected_data/7a_pa_heat_suppress.csv")
 
 temp_dat <- bias %>%
   as_tibble(rownames = "var1") %>%
   pivot_longer(cols = -var1, names_to = "var2", values_to = "correlation")
 
-write_csv(temp_dat, "data/privacy_protected_data/3-5_pa-heat-suppress-bias.csv")
+write_csv(temp_dat, "data/privacy_protected_data/7b_pa-heat-suppress-bias.csv")
 ```
 
 #### Privacy-Utility Curve
@@ -665,12 +676,12 @@ ggplot() +
           mapping = aes(fill = no_computer_internet),
           color = "#ffffff", size = 0.25) +
   scale_fill_gradientn(labels = scales::percent, limits = c(0, 1)) + 
-  labs(fill = "Computer/Broadband")
+  labs(fill = "Students with no computer/broadband access")
 
-ggsave("figures/3-7.svg", width = 5, height = 5, units = "in")
+ggsave("figures/09.svg", width = 5, height = 5, units = "in")
 
 # For generating the data to create the plots
-write_csv(temp, "data/privacy_protected_data/3-7_nm-broad-band.csv")
+write_csv(temp, "data/privacy_protected_data/09_nm-broad-band.csv")
 
 ```
 
@@ -709,12 +720,12 @@ ggplot() +
           mapping = aes(fill = single_parent),
           color = "#ffffff", size = 0.25) +
   scale_fill_gradientn(labels = scales::percent, limits = c(0, 1)) + 
-  labs(fill = "Single Parent")
+  labs(fill = "Students in single-parent households")
 
-ggsave("figures/3-9.svg", width = 6.5, height = 4, units = "in")
+ggsave("figures/11.svg", width = 6.5, height = 4, units = "in")
 
 # For generating the data to create the plots
-write_csv(temp, "data/privacy_protected_data/3-9_pa-single-parent.csv")
+write_csv(temp, "data/privacy_protected_data/11_pa-single-parent.csv")
 
 ```
 
@@ -748,14 +759,14 @@ ggplot() +
           mapping = aes(fill = no_computer_internet),
           color = "#ffffff", size = 0.25) +
   scale_fill_gradientn(colors = palette_urbn_diverging, labels = scales::percent, limits = c(-0.25, 0.25)) + 
-  labs(fill = "Computer/Broadband Bias") +
-    facet_wrap(. ~ Alpha)
+  labs(fill = "Students with no computer/broadband access bias") +
+    facet_wrap(. ~ Alpha, labeller = labeller(Alpha = c("0.1" = "Smoothing paramter: 0.1", "0.25" = "Smoothing paramter: 0.25", "0.5" = "Smoothing paramter: 0.5")))
 
 
-ggsave("figures/3-8.svg", width = 6.5, height = 4, units = "in")
+ggsave("figures/10.svg", width = 9, height = 4, units = "in")
 
 # For generating the data to create the plots
-write_csv(temp, "data/privacy_protected_data/3-8_nm-broad-band-synthetic.csv")
+write_csv(temp, "data/privacy_protected_data/10_nm-broad-band-synthetic.csv")
   
 ```
 
@@ -787,12 +798,13 @@ ggplot() +
           mapping = aes(fill = single_parent),
           color = "#ffffff", size = 0.25) +
   scale_fill_gradientn(colors = palette_urbn_diverging, labels = scales::percent, limits = c(-0.25, 0.25)) + 
-  labs(fill = "Single Parent Bias") +
-    facet_wrap(. ~ Alpha, dir = "h")
+  labs(fill = "Students in single-parent households bias") +
+    facet_wrap(. ~ Alpha, labeller = labeller(Alpha = c("0.1" = "Smoothing paramter: 0.1", "0.25" = "Smoothing paramter: 0.25", "0.5" = "Smoothing paramter: 0.5")))
 
-ggsave("figures/3-10.svg", width = 6.5, height = 4, units = "in")
+
+ggsave("figures/12.svg", width = 9, height = 4, units = "in")
 
 # For generating the data to create the plots
-write_csv(temp, "data/privacy_protected_data/3-10_pa-broad-band-synthetic.csv")
+write_csv(temp, "data/privacy_protected_data/12_pa-broad-band-synthetic.csv")
 
 ```
