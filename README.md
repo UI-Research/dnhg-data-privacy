@@ -1,6 +1,6 @@
 # Code and Example Data for the "Do No Harm Guide: Applying Equity Awareness in Data Privacy Methods"
 
-This repo/folder contains code used to generate the examples in the "Do No Harm Guide: Applying Equity Awareness in Data Privacy Methods", which can be found [here](XXXX).
+This repo/folder contains code used to generate the examples in the "Do No Harm Guide: Applying Equity Awareness in Data Privacy Methods", which can be found [here](https://www.urban.org/research/publication/do-no-harm-guide-applying-equity-awareness-data-privacy-methods).
 
 **Disclaimer:** Please note that the analyses in this chapter are inspired by real data and public policy analytics but are not representative of them.
 
@@ -27,12 +27,17 @@ The data are from a Urban research report called, "[Mapping Student Needs during
 
 This directory contains the `.R` scripts for the used in the paper except for some basic functions that we will list in the next section.
 
-  - `XXX.R` is the R script to XXXX.
-  
-### Commonly Used R Functions
-The following is a list of R functions we used from other packages to generate our results.
-
-  - `XXX.R` is the R script to XXXX.
+  - `broadband_fun.R` is the R script wrapper for generating the broadband/computer school district plots.
+  - `dp_count.R` is the R script for smart rounded DP values for multiple counts.
+  - `dp_fun.R` is the R script wrapper for generating DP data.
+  - `helper_functions.R` is the R script for smartly round numbers to integers. This functions works accurately on grouped dataframes (ie applies the rounding within each group).
+  - `k-suppression.R` is the R script for generating suppressed data.
+  - `lap_san.R` is the R script wrapper for synth-count.R.
+  - `parent_fun.R` is the R script wrapper for for generating the single parent school district plots.
+  - `post_processing.R` is the R script for post-processing the values (i.e., factor counts cannot exceed total counts).
+  - `synth.R` is the R script wrapper for generating the broadband/computer school district plots.
+  - `synth_count.R` is the R script for generating synthetic data via a multinomial distribution.
+  - `synth_fun.R` is the R script wrapper for generating synthetic data.
 
 ## Contact Information
 - Claire McKay Bowen, PhD (cbowen@urban.org)
